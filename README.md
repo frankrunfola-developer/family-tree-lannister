@@ -3,7 +3,7 @@
 A lightweight **Flask + D3.js** app that renders a **family tree with photo nodes**.
 
 This version ships with:
-- A **preloaded Lannister-focused dataset** (Tywin/Joanna → Cersei/Jaime/Tyrion → Joffrey/Myrcella/Tommen)
+- A **preloaded family-focused dataset** (Tywin/Joanna → Cersei/Jaime/Tyrion → Joffrey/Myrcella/Tommen)
 - **Preloaded images** (generated, self-contained)
 - **Vertical flow** (top → down)
 - **Simple UI** (tree first; JSON editor is optional / collapsed)
@@ -27,6 +27,7 @@ source .venv/bin/activate
 
 ### 2) Install dependencies
 ```bash
+python.exe -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
@@ -93,10 +94,24 @@ family-tree-got/
 - Builds a parent→child hierarchy
 - Renders a **vertical tree** (top → down)
 - Each node shows:
-  - circular photo (clipped)
+  - square photo (clipped)
   - name
   - optional born/died line
 - Includes zoom/pan
+
+---
+
+## Important rendering behavior
+
+### Couples are visually connected (even if one spouse has no parents)
+Couple nodes draw a **horizontal connector stroke** between partners. This guarantees that a spouse who is only present in the tree **by marriage** (no parents in the dataset) still has a visible line tying them to the tree.
+
+### Parent-child links target the correct spouse in a couple
+When a child node is a **couple**, the parent→child link is routed to **only the descendant spouse** (the actual child), not through both spouses. This makes the ancestry unambiguous.
+
+### Clean defaults on refresh
+- The tree starts **centered** every refresh (no hard-coded translate values).
+- Nodes are **square** (with slight rounding) instead of circular.
 
 ---
 

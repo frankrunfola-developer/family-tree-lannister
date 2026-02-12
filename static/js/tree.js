@@ -1,499 +1,321 @@
-const canvas = document.getElementById("canvas");
-const reloadBtn = document.getElementById("reloadBtn");
-const saveBtn = document.getElementById("saveBtn");
-const jsonBox = document.getElementById("jsonBox");
-const personSelect = document.getElementById("personSelect");
-const photoUpload = document.getElementById("photoUpload");
-const assignPhotoBtn = document.getElementById("assignPhotoBtn");
+// tree.js
+// Dagre layout + union nodes for genealogical structure.
+// IMPORTANT: do NOT collapse unions (renderer uses them for couple+hub routing).
+// Tighter spacing + card-sized nodes.
 
-let currentData = null;
-let uploadedPhotoUrl = null;
+import { renderFamilyTree } from "./familyTree.js";
 
-async function fetchFamily() {
-  const res = await fetch("/api/family");
-  const data = await res.json();
-  currentData = data;
-
-  if (jsonBox) jsonBox.value = JSON.stringify(data, null, 2);
-  populatePersonSelect(data);
-  renderFromJson(data);
+function getRelPair(r) {
+  const parent =
+    r.parentId ?? r.parent ?? r.sourceId ?? r.source ?? r.from ?? r.src;
+  const child =
+    r.childId ?? r.child ?? r.targetId ?? r.target ?? r.to ?? r.dst;
+  if (!parent || !child) return null;
+  return { parent: String(parent), child: String(child) };
 }
 
-function populatePersonSelect(data) {
-  personSelect.innerHTML = "";
-  for (const p of data.people || []) {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.name;
-    personSelect.appendChild(opt);
+function buildGeneDAG(data) {
+  const people = Array.isArray(data.people) ? data.people : [];
+  const relationships = Array.isArray(data.relationships) ? data.relationships : [];
+
+  const personById = new Map(people.map((p) => [String(p.id), p]));
+  const parentsByChild = new Map();
+
+  for (const r of relationships) {
+    const pair = getRelPair(r);
+    if (!pair) continue;
+    if (!parentsByChild.has(pair.child)) parentsByChild.set(pair.child, new Set());
+    parentsByChild.get(pair.child).add(pair.parent);
   }
+
+  const unionIdByKey = new Map();
+  const unions = [];
+  const edges = [];
+
+  const unionKey = (parents) => [...parents].sort().join("|");
+
+  for (const [childId, parentSet] of parentsByChild.entries()) {
+    const parents = [...parentSet].filter((pid) => personById.has(pid));
+    if (!parents.length) continue;
+
+    const key = unionKey(parents);
+    let unionId = unionIdByKey.get(key);
+
+    if (!unionId) {
+      unionId = `u:${key}`;
+      unionIdByKey.set(key, unionId);
+      unions.push({ id: unionId, kind: "union", parents });
+      for (const pid of parents) edges.push({ sourceId: pid, targetId: unionId });
+    }
+
+    edges.push({ sourceId: unionId, targetId: childId });
+  }
+
+  const nodes = [];
+
+  for (const p of people) {
+    const id = String(p.id);
+    nodes.push({
+      id,
+      kind: "person",
+      label: p.name ?? p.label ?? id,
+      photoUrl: p.photoUrl ?? p.photo ?? p.imageUrl ?? null,
+      _raw: p,
+    });
+  }
+
+  for (const u of unions) nodes.push({ id: u.id, kind: "union", label: "" });
+
+  // Ensure any referenced ids exist as nodes
+  const seen = new Set(nodes.map((n) => n.id));
+  for (const e of edges) {
+    if (!seen.has(e.sourceId)) {
+      nodes.push({ id: e.sourceId, kind: "person", label: e.sourceId });
+      seen.add(e.sourceId);
+    }
+    if (!seen.has(e.targetId)) {
+      nodes.push({ id: e.targetId, kind: "person", label: e.targetId });
+      seen.add(e.targetId);
+    }
+  }
+
+  return { nodes, links: edges };
 }
 
-// ------------------------------------------------------------
-// Two-parent support WITHOUT duplicating people
-//
-// - Parent/child relationships are { parent, child }.
-// - Spouse/partner relationships exist as edges only:
-//      { "type": "spouse"|"partner", "a": "id1", "b": "id2" }
-//
-// Rendering rules:
-// 1) Couples are created ONLY for co-parents (two people who share at least one child).
-//    This keeps each person appearing exactly once in the ancestry tree.
-// 2) Spouse relationships are drawn as extra SVG links between existing nodes,
-//    so a person can be both a child (of parents) and a spouse (to someone else)
-//    without being duplicated as a separate node.
-// ------------------------------------------------------------
-function buildTree(data) {
-  const peopleById = new Map((data.people || []).map(p => [p.id, p]));
+function dagreLayout(graphNodes, graphLinks, opts = {}) {
+  const dagre = window.dagre;
+  if (!dagre) throw new Error("Dagre not found. Ensure dagre.min.js loads before tree.js.");
 
-  const childrenByParent = new Map(); // parentId -> [childId]
-  const parentsByChild = new Map();   // childId  -> [parentId]
-  const spousePairs = [];             // [[a,b], ...]
+  // TIGHTER spacing (more dense)
+  const {
+    rankdir = "TB",
+    ranksep = 50,   // vertical distance between generations
+    nodesep = 30,   // horizontal distance between siblings
+    marginx = 14,
+    marginy = 14,
+  } = opts;
 
-  // Parse relationships
-  for (const rel of (data.relationships || [])) {
-    const t = (rel.type || "").toLowerCase();
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir, ranksep, nodesep, marginx, marginy });
+  g.setDefaultEdgeLabel(() => ({}));
 
-    if (t === "spouse" || t === "partner") {
-      if (rel.a && rel.b && peopleById.has(rel.a) && peopleById.has(rel.b)) {
-        const a = rel.a, b = rel.b;
-        // normalize to avoid dup pairs
-        const key = [a, b].sort().join("+");
-        if (!spousePairs.some(p => p.key === key)) spousePairs.push({ key, a, b });
+  // Must match card-ish size in familyTree.js (roughly)
+  const PERSON_W = 210;
+  const PERSON_H = 185;
+
+  for (const n of graphNodes) {
+    const isUnion = n.kind === "union";
+    const w = isUnion ? 6 : PERSON_W;
+    const h = isUnion ? 6 : PERSON_H;
+    g.setNode(n.id, { width: w, height: h });
+  }
+
+  for (const e of graphLinks) g.setEdge(e.sourceId, e.targetId);
+
+  dagre.layout(g);
+
+  const placed = graphNodes.map((n) => {
+    const dn = g.node(n.id);
+    return { ...n, x: dn?.x ?? 0, y: dn?.y ?? 0 };
+  });
+
+  // Normalize
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of placed) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x);
+    maxY = Math.max(maxY, n.y);
+  }
+
+  const pad = 24;
+  for (const n of placed) {
+    n.x = n.x - minX + pad;
+    n.y = n.y - minY + pad;
+  }
+
+  return {
+    nodes: placed,
+    links: graphLinks.map((e) => ({ sourceId: String(e.sourceId), targetId: String(e.targetId) })),
+    bounds: { width: (maxX - minX) + pad * 2, height: (maxY - minY) + pad * 2 },
+  };
+}
+
+
+function refineSpacing(laidNodes, laidLinks, opts = {}) {
+  const {
+    SPOUSE_GAP = 26,      // distance between spouse cards (edge-to-edge feel)
+    SIBLING_GAP = 20,     // distance between siblings in same family
+    CLUSTER_GAP = 60,     // extra gap between unrelated clusters
+    CARD_W = 190,         // must match familyTree.js
+  } = opts;
+
+  const byId = new Map(laidNodes.map(n => [String(n.id), n]));
+  const isUnion = (id) => byId.get(String(id))?.kind === "union";
+
+  // unionId -> { parents:[], children:[] }
+  const unions = new Map();
+
+  for (const e of laidLinks) {
+    const s = String(e.sourceId);
+    const t = String(e.targetId);
+
+    if (isUnion(t) && !isUnion(s)) {
+      if (!unions.has(t)) unions.set(t, { parents: [], children: [] });
+      unions.get(t).parents.push(s);
+    } else if (isUnion(s) && !isUnion(t)) {
+      if (!unions.has(s)) unions.set(s, { parents: [], children: [] });
+      unions.get(s).children.push(t);
+    }
+  }
+
+  // Helper to place a set of nodes centered around cx with fixed gap
+  function placeRowCentered(ids, cx, gap) {
+    const arr = ids.map(id => byId.get(id)).filter(Boolean);
+    arr.sort((a, b) => a.x - b.x); // stable-ish order
+
+    const step = CARD_W + gap;
+    const totalW = arr.length > 0 ? (arr.length - 1) * step : 0;
+    const startX = cx - totalW / 2;
+
+    for (let i = 0; i < arr.length; i++) {
+      arr[i].x = startX + i * step;
+    }
+  }
+
+  // 1) Enforce spouse + sibling spacing per union
+  for (const [uId, pc] of unions.entries()) {
+    const u = byId.get(uId);
+    if (!u) continue;
+
+    const parentIds = [...new Set(pc.parents)].filter(id => byId.has(id));
+    const childIds = [...new Set(pc.children)].filter(id => byId.has(id));
+
+    if (parentIds.length) placeRowCentered(parentIds, u.x, SPOUSE_GAP);
+    if (childIds.length) placeRowCentered(childIds, u.x, SIBLING_GAP);
+
+    // keep union centered between spouses (helps routing look nicer)
+    if (parentIds.length >= 2) {
+      const ps = parentIds.map(id => byId.get(id)).filter(Boolean).sort((a,b)=>a.x-b.x);
+      u.x = (ps[0].x + ps[ps.length - 1].x) / 2;
+    }
+  }
+
+  // 2) Cluster separation (simple collision push on each rank/y band)
+  // Group nodes by y (rounded band)
+  const bands = new Map();
+  const BAND = 20; // tolerance
+  for (const n of laidNodes) {
+    if (n.kind === "union") continue; // unions are invisible
+    const key = Math.round(n.y / BAND);
+    if (!bands.has(key)) bands.set(key, []);
+    bands.get(key).push(n);
+  }
+
+  for (const [, row] of bands.entries()) {
+    row.sort((a, b) => a.x - b.x);
+    let lastRight = -Infinity;
+
+    for (const n of row) {
+      const left = n.x - CARD_W / 2;
+      const right = n.x + CARD_W / 2;
+
+      if (left < lastRight + CLUSTER_GAP) {
+        const push = (lastRight + CLUSTER_GAP) - left;
+        n.x += push;
       }
-      continue;
-    }
-
-    // Default: treat as parent/child
-    if (!rel.parent || !rel.child) continue;
-
-    if (!childrenByParent.has(rel.parent)) childrenByParent.set(rel.parent, []);
-    childrenByParent.get(rel.parent).push(rel.child);
-
-    if (!parentsByChild.has(rel.child)) parentsByChild.set(rel.child, []);
-    parentsByChild.get(rel.child).push(rel.parent);
-  }
-
-  const allChildren = new Set();
-  for (const [childId] of parentsByChild) allChildren.add(childId);
-
-  const rootPeople = (data.people || []).filter(p => !allChildren.has(p.id));
-  if (!rootPeople.length) return { root: null, spousePairs: [], coupleKeys: new Set() };
-
-  // Tracks people already placed inside a couple node, to avoid duplicates/cycles
-  const coupledPeople = new Set();
-  const coupleKeys = new Set();
-
-  function personPayload(personId) {
-    const p = peopleById.get(personId);
-    if (!p) return null;
-    return {
-      id: p.id,
-      name: p.name,
-      born: p.born || "",
-      died: p.died || "",
-      photo: p.photo || ""
-    };
-  }
-
-  function coupleKey(a, b) {
-    return [a, b].sort().join("+");
-  }
-
-  function getCoParent(personId) {
-    // Find the first co-parent (based on relationship order)
-    const kids = childrenByParent.get(personId) || [];
-    for (const childId of kids) {
-      const parents = parentsByChild.get(childId) || [];
-      if (parents.length >= 2) {
-        const other = parents.find(x => x !== personId);
-        if (other && peopleById.has(other)) return other;
-      }
-    }
-    return null;
-  }
-
-  function childrenForCouple(p1, p2) {
-    // Children that list BOTH p1 and p2 as parents
-    const kids1 = new Set(childrenByParent.get(p1) || []);
-    const kids2 = new Set(childrenByParent.get(p2) || []);
-    const both = [];
-    for (const kid of kids1) {
-      if (!kids2.has(kid)) continue;
-      const parents = parentsByChild.get(kid) || [];
-      if (parents.includes(p1) && parents.includes(p2)) both.push(kid);
-    }
-    return both;
-  }
-
-  function buildChildrenForUnit(unit) {
-    let childIds = [];
-
-    if (unit.type === "couple") {
-      const [p1, p2] = unit.parents;
-      childIds = childrenForCouple(p1, p2);
-    } else {
-      // Single-parent unit: only attach children that have EXACTLY one parent.
-      // (Two-parent children will attach under a couple unit instead.)
-      const kids = childrenByParent.get(unit.id) || [];
-      childIds = kids.filter(kid => (parentsByChild.get(kid) || []).length <= 1);
-    }
-
-    const out = [];
-    for (const childId of childIds) {
-      const childUnit = buildUnitForPerson(childId);
-      if (childUnit) out.push(childUnit);
-    }
-    return out;
-  }
-
-  function buildUnitForPerson(personId) {
-    const p = peopleById.get(personId);
-    if (!p) return null;
-
-    const partnerId = getCoParent(personId);
-
-    // Create couple ONLY for co-parents
-    if (partnerId && !coupledPeople.has(personId) && !coupledPeople.has(partnerId)) {
-      coupledPeople.add(personId);
-      coupledPeople.add(partnerId);
-
-      const pa = personPayload(personId);
-      const pb = personPayload(partnerId);
-      if (!pa || !pb) return null;
-
-      const ck = coupleKey(pa.id, pb.id);
-      coupleKeys.add(ck);
-
-      const unit = {
-        type: "couple",
-        id: `couple:${ck}`,
-        parents: [pa.id, pb.id],
-        parentA: pa,
-        parentB: pb
-      };
-
-      unit.children = buildChildrenForUnit(unit);
-      if (!unit.children || unit.children.length === 0) delete unit.children;
-      return unit;
-    }
-
-    // Person node
-    const payload = personPayload(personId);
-    if (!payload) return null;
-
-    const node = { type: "person", ...payload };
-
-    node.children = buildChildrenForUnit(node);
-    if (!node.children || node.children.length === 0) delete node.children;
-    return node;
-  }
-
-  // Build roots:
-  // 1) Prefer couple roots where both parents are roots (co-parents).
-  // 2) Then include remaining root people not already coupled.
-  const roots = [];
-
-  const rootIds = new Set(rootPeople.map(p => p.id));
-  for (const rp of rootPeople) {
-    if (coupledPeople.has(rp.id)) continue;
-
-    const partnerId = getCoParent(rp.id);
-    if (partnerId && rootIds.has(partnerId) && !coupledPeople.has(partnerId)) {
-      const coupleRoot = buildUnitForPerson(rp.id);
-      if (coupleRoot) roots.push(coupleRoot);
+      lastRight = n.x + CARD_W / 2;
     }
   }
 
-  for (const rp of rootPeople) {
-    if (coupledPeople.has(rp.id)) continue;
-    const rootNode = buildUnitForPerson(rp.id);
-    if (rootNode) roots.push(rootNode);
-  }
-
-  if (!roots.length) {
-    const first = (data.people || [])[0];
-    if (!first) return { root: null, spousePairs: [], coupleKeys };
-    return { root: buildUnitForPerson(first.id), spousePairs, coupleKeys };
-  }
-
-  if (roots.length > 1) {
-    return {
-      root: {
-        type: "superroot",
-        id: "__root__",
-        name: "",
-        born: "",
-        died: "",
-        photo: "",
-        children: roots
-      },
-      spousePairs,
-      coupleKeys
-    };
-  }
-
-  return { root: roots[0], spousePairs, coupleKeys };
+  return laidNodes;
 }
 
-function renderFromJson(data) {
-  const built = buildTree(data);
-  const rootObj = built.root;
-  if (!rootObj) {
-    canvas.innerHTML = `<div style="padding:16px;">No data to render.</div>`;
-    return;
-  }
 
-  canvas.innerHTML = "";
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
+function enablePanZoom(svg, viewport) {
+  let scale = 1, tx = 0, ty = 0;
+  const apply = () => viewport.setAttribute("transform", `translate(${tx}, ${ty}) scale(${scale})`);
 
-  const svg = d3.select(canvas)
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height);
+  svg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
 
-  const g = svg.append("g").attr("transform", "translate(40,40)");
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(4, Math.max(0.2, scale * factor));
 
-  const root = d3.hierarchy(rootObj);
+    const sx = (mx - tx) / scale;
+    const sy = (my - ty) / scale;
 
-  const layout = d3.tree().nodeSize([110, 150]); // [xSpacing, ySpacing]
-  layout(root);
+    scale = newScale;
+    tx = mx - sx * scale;
+    ty = my - sy * scale;
 
-  // Base links (parent-child)
-  g.selectAll(".link")
-    .data(root.links())
-    .enter()
-    .append("path")
-    .attr("class", "link")
-    .attr("fill", "none")
-    .attr("stroke", "#444")
-    .attr("stroke-width", 2)
-    .attr("d", d => {
-      const x0 = d.source.x, y0 = d.source.y;
-      const x1 = d.target.x, y1 = d.target.y;
-      const midY = (y0 + y1) / 2;
-      return `M ${x0} ${y0} V ${midY} H ${x1} V ${y1}`;
-    });
+    apply();
+  }, { passive: false });
 
-  const defs = svg.append("defs");
-  const nodes = g.selectAll(".node")
-    .data(root.descendants())
-    .enter()
-    .append("g")
-    .attr("class", "node")
-    .attr("transform", d => `translate(${d.x},${d.y})`);
+  let dragging = false, lastX = 0, lastY = 0;
 
-  const r = 28;
-  const coupleGap = 12;
-  const coupleOffset = r + coupleGap;
-
-  // Map personId -> anchor position in the rendered tree (to draw spouse edges)
-  // If a person appears in a couple node, we map them to that couple-side anchor.
-  // If the person also appears as a standalone node (shouldn't happen in a tree),
-  // we keep the first mapping (prefer their ancestry placement).
-  const personAnchor = new Map();
-
-  // Clip paths + anchors
-  nodes.each(function(d, i) {
-    const t = d.data.type || "person";
-    if (t === "couple") {
-      defs.append("clipPath").attr("id", `clip-${i}-a`)
-        .append("circle").attr("r", r).attr("cx", -coupleOffset).attr("cy", 0);
-      defs.append("clipPath").attr("id", `clip-${i}-b`)
-        .append("circle").attr("r", r).attr("cx", +coupleOffset).attr("cy", 0);
-
-      // anchors for spouse edges / linking
-      const aId = d.data.parentA?.id;
-      const bId = d.data.parentB?.id;
-      if (aId && !personAnchor.has(aId)) personAnchor.set(aId, { x: d.x - coupleOffset, y: d.y });
-      if (bId && !personAnchor.has(bId)) personAnchor.set(bId, { x: d.x + coupleOffset, y: d.y });
-    } else {
-      defs.append("clipPath").attr("id", `clip-${i}`)
-        .append("circle").attr("r", r).attr("cx", 0).attr("cy", 0);
-
-      const pid = d.data.id;
-      if (pid && !personAnchor.has(pid)) personAnchor.set(pid, { x: d.x, y: d.y });
-    }
+  svg.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    svg.setPointerCapture(e.pointerId);
+    lastX = e.clientX;
+    lastY = e.clientY;
   });
 
-  // Draw nodes
-  nodes.each(function(d, i) {
-    const group = d3.select(this);
-    const t = d.data.type || "person";
-
-    if (t === "superroot") return;
-
-    if (t === "couple") {
-      group.append("circle")
-        .attr("r", r + 3)
-        .attr("cx", -coupleOffset)
-        .attr("cy", 0)
-        .attr("fill", "#0b0c10")
-        .attr("stroke", "#666")
-        .attr("stroke-width", 2);
-
-      group.append("circle")
-        .attr("r", r + 3)
-        .attr("cx", +coupleOffset)
-        .attr("cy", 0)
-        .attr("fill", "#0b0c10")
-        .attr("stroke", "#666")
-        .attr("stroke-width", 2);
-
-      group.append("image")
-        .attr("href", d.data.parentA?.photo || "")
-        .attr("x", -coupleOffset - r)
-        .attr("y", -r)
-        .attr("width", r * 2)
-        .attr("height", r * 2)
-        .attr("clip-path", `url(#clip-${i}-a)`)
-        .on("error", function() { d3.select(this).attr("visibility", "hidden"); });
-
-      group.append("image")
-        .attr("href", d.data.parentB?.photo || "")
-        .attr("x", +coupleOffset - r)
-        .attr("y", -r)
-        .attr("width", r * 2)
-        .attr("height", r * 2)
-        .attr("clip-path", `url(#clip-${i}-b)`)
-        .on("error", function() { d3.select(this).attr("visibility", "hidden"); });
-
-      group.append("text")
-        .attr("dy", r + 18)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#e8e8e8")
-        .attr("font-size", 12)
-        .text(`${d.data.parentA?.name || ""}  +  ${d.data.parentB?.name || ""}`);
-
-      return;
-    }
-
-    group.append("circle")
-      .attr("r", r + 3)
-      .attr("fill", "#0b0c10")
-      .attr("stroke", "#666")
-      .attr("stroke-width", 2);
-
-    group.append("image")
-      .attr("href", d.data.photo || "")
-      .attr("x", -r)
-      .attr("y", -r)
-      .attr("width", r * 2)
-      .attr("height", r * 2)
-      .attr("clip-path", `url(#clip-${i})`)
-      .on("error", function() { d3.select(this).attr("visibility", "hidden"); });
-
-    group.append("text")
-      .attr("dy", r + 18)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#e8e8e8")
-      .attr("font-size", 12)
-      .text(d.data.name || "");
-
-    group.append("text")
-      .attr("dy", r + 34)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#bdbdbd")
-      .attr("font-size", 10)
-      .text(() => {
-        const born = d.data.born ? `b. ${d.data.born}` : "";
-        const died = d.data.died ? `d. ${d.data.died}` : "";
-        return [born, died].filter(Boolean).join("  ");
-      });
+  svg.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    tx += (e.clientX - lastX);
+    ty += (e.clientY - lastY);
+    lastX = e.clientX;
+    lastY = e.clientY;
+    apply();
   });
 
-  // Spouse edges: draw between existing anchors, skipping pairs already represented
-  // as co-parent couple nodes (those are already visually paired).
-  const spouseLinks = [];
-  for (const p of (built.spousePairs || [])) {
-    if (built.coupleKeys && built.coupleKeys.has(p.key)) continue; // already a couple node
-    const a = personAnchor.get(p.a);
-    const b = personAnchor.get(p.b);
-    if (!a || !b) continue; // one side not rendered
-    spouseLinks.push({ a, b, key: p.key });
-  }
+  svg.addEventListener("pointerup", (e) => {
+    dragging = false;
+    try { svg.releasePointerCapture(e.pointerId); } catch {}
+  });
 
-  g.selectAll(".spouse-link")
-    .data(spouseLinks)
-    .enter()
-    .append("path")
-    .attr("class", "spouse-link")
-    .attr("fill", "none")
-    .attr("stroke", "#777")
-    .attr("stroke-width", 2)
-    .attr("stroke-dasharray", "6,6")
-    .attr("d", d => {
-      // simple horizontal-ish connector with a small midpoint jog
-      const x0 = d.a.x, y0 = d.a.y;
-      const x1 = d.b.x, y1 = d.b.y;
-      const midX = (x0 + x1) / 2;
-      return `M ${x0} ${y0} H ${midX} V ${y1} H ${x1}`;
-    });
-
-  svg.call(
-    d3.zoom()
-      .scaleExtent([0.4, 2.0])
-      .on("zoom", (event) => g.attr("transform", event.transform))
-  );
+  apply();
 }
 
-reloadBtn.addEventListener("click", fetchFamily);
-
-if (saveBtn && jsonBox) {
-  saveBtn.addEventListener("click", async () => {
-    let parsed;
-    try { parsed = JSON.parse(jsonBox.value); }
-    catch { alert("JSON is invalid. Fix it first."); return; }
-
-    const res = await fetch("/api/family", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(parsed)
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert(`Save failed: ${err.error || res.statusText}`);
-      return;
-    }
-
-    currentData = parsed;
-    populatePersonSelect(parsed);
-    renderFromJson(parsed);
-    alert("Saved.");
-  });
+async function loadTreeData(treeName = "gupta") {
+  const res = await fetch(`/api/tree/${encodeURIComponent(treeName)}`);
+  if (!res.ok) throw new Error(`Failed to load tree JSON (${res.status})`);
+  return await res.json();
 }
 
-photoUpload.addEventListener("change", async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+export async function initTree(treeName = "gupta") {
+  const svg = document.querySelector("#treeSvg");
+  if (!svg) throw new Error("Missing #treeSvg element");
 
-  const fd = new FormData();
-  fd.append("file", file);
+  const data = await loadTreeData(treeName);
+  const { nodes: graphNodes, links: graphLinks } = buildGeneDAG(data);
 
-  const res = await fetch("/api/upload", { method: "POST", body: fd });
-  const out = await res.json();
+  const laid = dagreLayout(graphNodes, graphLinks, { rankdir: "TB" });
 
-  if (!res.ok) { alert(out.error || "Upload failed"); return; }
+  // enforce your custom spacing rules
+  refineSpacing(laid.nodes, laid.links, {
+    SPOUSE_GAP: 18,
+    SIBLING_GAP: 14,
+    CLUSTER_GAP: 70,
+    CARD_W: 190
+  });
 
-  uploadedPhotoUrl = out.url;
-  alert("Uploaded. Select a person and click Assign Photo.");
+  const result = renderFamilyTree(svg, {
+    nodes: laid.nodes,
+    links: laid.links,
+    width: Math.max(1050, laid.bounds.width + 60),
+    height: Math.max(620, laid.bounds.height + 60),
+  });
+
+  enablePanZoom(svg, result.viewport);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const svg = document.querySelector("#treeSvg");
+  if (!svg) return;
+  initTree("gupta").catch((e) => console.error(e));
 });
-
-assignPhotoBtn.addEventListener("click", () => {
-  if (!uploadedPhotoUrl) { alert("Upload a photo first."); return; }
-  if (!currentData) { alert("No data loaded."); return; }
-
-  const personId = personSelect.value;
-  const person = (currentData.people || []).find(p => p.id === personId);
-  if (!person) { alert("Selected person not found."); return; }
-
-  person.photo = uploadedPhotoUrl;
-  if (jsonBox) jsonBox.value = JSON.stringify(currentData, null, 2);
-
-  renderFromJson(currentData);
-  uploadedPhotoUrl = null;
-});
-
-fetchFamily();

@@ -1,47 +1,50 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lannister Family Tree (Photo Nodes)</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-</head>
-<body>
-  <header class="bar">
-    <div class="title">
-      <h1>Lannister Family Tree</h1>
-      <p class="sub">Vertical layout • photo nodes • zoom/pan</p>
-    </div>
-
-    <div class="controls">
-      <button id="reloadBtn">Reload</button>
-
-      <label class="file">
-        Upload Photo
-        <input id="photoUpload" type="file" accept="image/png,image/jpeg,image/webp" />
-      </label>
-
-      <select id="personSelect"></select>
-      <button id="assignPhotoBtn">Assign Photo</button>
-    </div>
-  </header>
-
-  <main>
-    <div id="canvas"></div>
-
-    <details class="advanced">
-      <summary>Advanced: Edit JSON</summary>
-      <div class="adv-inner">
-        <button id="saveBtn">Save JSON</button>
-        <textarea id="jsonBox" spellcheck="false"></textarea>
-        <p class="hint">
-          Relationships are parent→child. The root ancestor is the person who is never listed as a child.
-        </p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gupta Family Tree</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="title">
+        <h1>Gupta Family Tree</h1>
+        <div class="sub">Dagre layout · union nodes · straight lines · zoom/pan</div>
       </div>
-    </details>
-  </main>
 
-  <script src="/static/js/tree.js"></script>
-</body>
+      <div class="actions">
+        <button id="reloadBtn" type="button">Reload</button>
+        <label class="btn">
+          Upload Photo
+          <input id="photoUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+        </label>
+        <select id="personSelect"></select>
+        <button id="assignPhotoBtn" type="button">Assign Photo</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="canvas">
+        <svg id="treeSvg"></svg>
+      </div>
+
+      <details class="advanced">
+        <summary>Advanced: Edit JSON</summary>
+        <div class="adv-inner">
+          <button id="saveBtn" type="button">Save JSON</button>
+          <textarea id="jsonBox" spellcheck="false"></textarea>
+          <p class="hint">
+            Relationships are parent→child. The root ancestor is the person who is never listed as a child.
+          </p>
+        </div>
+      </details>
+    </main>
+
+    <!-- Dagre MUST load before tree.js (tree.js reads window.dagre) -->
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+
+    <!-- tree.js uses ES module imports -->
+    <script type="module" src="/static/js/tree.js"></script>
+  </body>
 </html>
