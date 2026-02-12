@@ -1,9 +1,8 @@
-// familyTree.js
-// Card-based genealogy renderer (clean, no glow):
-// - Person nodes render as self-contained "cards" with photo + name + birth/death
-// - Lines only touch the OUTSIDE EDGE of the card
-// - Couples get a connector line between their cards
-// - UNION nodes are invisible hubs used for layout + routing
+// static/js/familyTree.js
+// Renderer for the family tree.
+// IMPORTANT: node.x/node.y are CENTER coordinates everywhere (Option A).
+
+import { TREE_CFG } from "./treeConfig.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -11,303 +10,367 @@ function el(tag) {
   return document.createElementNS(SVG_NS, tag);
 }
 
-function safeId(id) {
-  return String(id).replace(/[^a-zA-Z0-9_-]/g, "_");
+function clear(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
 }
 
-function pick(obj, keys) {
-  for (const k of keys) {
-    if (obj && obj[k] != null && obj[k] !== "") return obj[k];
-  }
-  return null;
+function cardTopLeft(n) {
+  const { CARD_W, CARD_H } = TREE_CFG.sizing;
+  return { x: n.x - CARD_W / 2, y: n.y - CARD_H / 2 };
 }
 
-function yearFromAny(v) {
-  if (v == null) return null;
-  if (typeof v === "number") {
-    if (v > 999 && v < 3000) return String(v);
-    return null;
-  }
-  const s = String(v).trim();
-  // match YYYY anywhere
-  const m = s.match(/(19\d{2}|20\d{2}|18\d{2}|17\d{2})/);
-  return m ? m[1] : null;
+function anchor(n, where) {
+  const { CARD_H } = TREE_CFG.sizing;
+
+  if (n.kind === "union") return { x: n.x, y: n.y };
+
+  const top = n.y - CARD_H / 2;
+  const bottom = n.y + CARD_H / 2;
+
+  if (where === "top") return { x: n.x, y: top };
+  if (where === "bottom") return { x: n.x, y: bottom };
+  return { x: n.x, y: n.y };
 }
 
-// Smooth-ish cubic curve that reads well in trees
-function curvePath(x1, y1, x2, y2, bend = 0.22) {
-  const dy = y2 - y1;
-  const c1y = y1 + dy * bend;
-  const c2y = y2 - dy * bend;
-  return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`;
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
 }
 
-export function renderFamilyTree(svgEl, { nodes, links, width = 1200, height = 700 }) {
-  const svg = typeof svgEl === "string" ? document.querySelector(svgEl) : svgEl;
-  if (!svg) throw new Error("SVG element not found");
+function computeStemLen(a, b) {
+  const maxStem = TREE_CFG.links.STEM_LEN ?? 10;
+  const minStem = TREE_CFG.links.STEM_MIN ?? 6;
+  const factor = TREE_CFG.links.STEM_FACTOR ?? 0;
 
-  // Clear SVG
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const gap = b.y - a.y;
+  if (!(gap > 0)) return minStem;
 
+  const adaptive = factor > 0 ? gap * factor : maxStem;
+  return clamp(adaptive, minStem, maxStem);
+}
+
+function drawElbowPath(path, a, b) {
+  const stem = computeStemLen(a, b);
+  const midY = a.y + stem;
+
+  const d = [
+    `M ${a.x} ${a.y}`,
+    `L ${a.x} ${midY}`,
+    `L ${b.x} ${midY}`,
+    `L ${b.x} ${b.y}`,
+  ].join(" ");
+
+  path.setAttribute("d", d);
+}
+
+function buildNodeMap(nodes) {
+  const m = new Map();
+  for (const n of nodes) m.set(String(n.id), n);
+  return m;
+}
+
+function applyViewBox(svg, width, height) {
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.setAttribute("width", String(width));
-  svg.setAttribute("height", String(height));
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", "100%");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+}
 
-  // --- Layout constants (tune here) ---
-  const CARD_W = 210;
-  const CARD_H = 185;
-  const CARD_R = 16;
+function pickMeta(raw) {
+  if (!raw) return "";
 
-  const PHOTO_SIZE = 100; // square (we clip to circle)
-  const PHOTO_R = 48;
+  const direct =
+    raw.meta ??
+    raw.subtitle ??
+    raw.subTitle ??
+    raw.dates ??
+    raw.date ??
+    raw.birthDeath ??
+    raw.lifespan ??
+    raw.years ??
+    raw.yearRange ??
+    raw.displayYears ??
+    raw.displayDate ??
+    raw.life ??
+    raw.lifeSpan ??
+    null;
 
-  const NAME_Y = 135;
-  const META_Y = 162;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
 
-  // Anchor points on card edges
-  const topAnchor = (p) => ({ x: p.x, y: p.y - CARD_H / 2 });
-  const bottomAnchor = (p) => ({ x: p.x, y: p.y + CARD_H / 2 });
-  const leftAnchorAt = (p, y) => ({ x: p.x - CARD_W / 2, y });
-  const rightAnchorAt = (p, y) => ({ x: p.x + CARD_W / 2, y });
+  const by =
+    raw.birthYear ?? raw.birth_year ?? raw.bornYear ?? raw.born_year ??
+    raw.birthDate ?? raw.birth_date ??
+    raw.birth ?? raw.born ?? raw.b ??
+    raw.startYear ?? raw.start_year ??
+    null;
 
-  // defs for clipPaths
-  const defs = el("defs");
-  svg.appendChild(defs);
+  const dy =
+    raw.deathYear ?? raw.death_year ?? raw.diedYear ?? raw.died_year ??
+    raw.deathDate ?? raw.death_date ??
+    raw.death ?? raw.died ?? raw.d ??
+    raw.endYear ?? raw.end_year ??
+    null;
 
-  // viewport (pan/zoom group)
+  const norm = (v) => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    const m = s.match(/^(\d{4})[-/]/);
+    if (m) return m[1];
+    return s;
+  };
+
+  const B = norm(by);
+  const D = norm(dy);
+
+  if (B && D) return `${B} – ${D}`;
+  if (B) return /\bb\./i.test(B) ? B : `b. ${B}`;
+  if (D) return /\bd\./i.test(D) ? D : `d. ${D}`;
+  return "";
+}
+
+function drawPathCommon(path) {
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "rgba(255,255,255,0.35)");
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+}
+
+function drawCoupleJoin(linksG, parents, unionNode) {
+  if (!unionNode || parents.length < 2) return;
+
+  // Sort parents left->right by center X
+  const ps = parents.slice().sort((a, b) => a.x - b.x);
+
+  const left = ps[0];
+  const right = ps[ps.length - 1];
+
+  const aL = anchor(left, "bottom");
+  const aR = anchor(right, "bottom");
+  const unionPt = anchor(unionNode, "mid");
+
+  const trunkDesired = TREE_CFG.links.COUPLE_STEM ?? 14;
+
+  // NEW: cap how tall the parent vertical drops can be
+  // Default: same as couple trunk height (what you asked for)
+  const parentMax = TREE_CFG.links.PARENT_STEM_MAX ?? trunkDesired;
+
+  const maxBottom = Math.max(aL.y, aR.y);
+  const minJoinY = maxBottom + 2;
+
+  // Ideal joinY to get trunk height ~= trunkDesired:
+  const targetJoinY = unionPt.y - trunkDesired;
+
+  // But we clamp so parent->join verticals are never taller than parentMax
+  const maxJoinY = minJoinY + parentMax;
+
+  // Final joinY:
+  const joinY = clamp(targetJoinY, minJoinY, maxJoinY);
+
+  // Parent verticals (now capped)
+  const p1 = el("path");
+  drawPathCommon(p1);
+  p1.setAttribute("d", `M ${aL.x} ${aL.y} L ${aL.x} ${joinY}`);
+  linksG.appendChild(p1);
+
+  const p2 = el("path");
+  drawPathCommon(p2);
+  p2.setAttribute("d", `M ${aR.x} ${aR.y} L ${aR.x} ${joinY}`);
+  linksG.appendChild(p2);
+
+  // Horizontal join between parents
+  const p3 = el("path");
+  drawPathCommon(p3);
+  p3.setAttribute("d", `M ${aL.x} ${joinY} L ${aR.x} ${joinY}`);
+  linksG.appendChild(p3);
+
+  // Vertical trunk down to union (takes whatever remaining distance exists)
+  const midX = (aL.x + aR.x) / 2;
+
+  const p4 = el("path");
+  drawPathCommon(p4);
+  p4.setAttribute("d", `M ${midX} ${joinY} L ${midX} ${unionPt.y}`);
+  linksG.appendChild(p4);
+}
+
+export function renderFamilyTree(svg, { nodes, links, width, height }) {
+  clear(svg);
+  applyViewBox(svg, width, height);
+
   const viewport = el("g");
-  viewport.setAttribute("id", "viewport");
+  viewport.setAttribute("class", "tree-viewport");
   svg.appendChild(viewport);
 
-  const gLinks = el("g");
-  gLinks.setAttribute("class", "links");
-  viewport.appendChild(gLinks);
+  const defs = el("defs");
+  viewport.appendChild(defs);
 
-  const gNodes = el("g");
-  gNodes.setAttribute("class", "nodes");
-  viewport.appendChild(gNodes);
+  const nodeById = buildNodeMap(nodes);
 
-  const byId = new Map((nodes ?? []).map((n) => [String(n.id), n]));
-  const isUnion = (id) => byId.get(String(id))?.kind === "union";
+  // Build union->parents map from links
+  const parentsByUnion = new Map();
+  for (const lk of links) {
+    const s = nodeById.get(String(lk.sourceId));
+    const t = nodeById.get(String(lk.targetId));
+    if (!s || !t) continue;
 
-  // unionId -> { parents:Set, children:Set }
-  const unions = new Map();
-  for (const l of links ?? []) {
-    const s = String(l.sourceId);
-    const t = String(l.targetId);
-
-    if (isUnion(t) && !isUnion(s)) {
-      if (!unions.has(t)) unions.set(t, { parents: new Set(), children: new Set() });
-      unions.get(t).parents.add(s);
-    } else if (isUnion(s) && !isUnion(t)) {
-      if (!unions.has(s)) unions.set(s, { parents: new Set(), children: new Set() });
-      unions.get(s).children.add(t);
+    if (t.kind === "union" && s.kind === "person") {
+      const u = String(t.id);
+      if (!parentsByUnion.has(u)) parentsByUnion.set(u, []);
+      parentsByUnion.get(u).push(s);
     }
   }
 
-  // --- Link styling (inline so you aren't fighting CSS) ---
-  const makePath = (d, cls) => {
-    const p = el("path");
-    p.setAttribute("d", d);
-    p.setAttribute("fill", "none");
-    p.setAttribute("stroke", "rgba(255,255,255,0.62)");
-    p.setAttribute("stroke-width", "2.4");
-    p.setAttribute("stroke-linecap", "round");
-    p.setAttribute("opacity", "0.95");
-    if (cls) p.setAttribute("class", cls);
-    return p;
-  };
+  // ---- Links layer ----
+  const linksG = el("g");
+  linksG.setAttribute("class", "tree-links");
+  viewport.appendChild(linksG);
 
-  const makeLine = (x1, y1, x2, y2, stroke = "rgba(255,255,255,0.65)", widthPx = 2.6) => {
-    const ln = el("line");
-    ln.setAttribute("x1", String(x1));
-    ln.setAttribute("y1", String(y1));
-    ln.setAttribute("x2", String(x2));
-    ln.setAttribute("y2", String(y2));
-    ln.setAttribute("stroke", stroke);
-    ln.setAttribute("stroke-width", String(widthPx));
-    ln.setAttribute("stroke-linecap", "round");
-    ln.setAttribute("opacity", "0.95");
-    return ln;
-  };
-
-  // ---------- DRAW LINKS ----------
-  for (const [uId, pc] of unions.entries()) {
-    const u = byId.get(uId);
-    if (!u) continue;
-
-    const parents = [...pc.parents].map((pid) => byId.get(pid)).filter(Boolean);
-    const kids = [...pc.children].map((cid) => byId.get(cid)).filter(Boolean);
-
-    if (!parents.length && !kids.length) continue;
-
-    // Couples: draw a connector between partner cards (NO marriage bar)
-    // If more than 2 parents exist, connect them left->right in sequence.
-    if (parents.length >= 2) {
-      parents.sort((a, b) => a.x - b.x);
-
-      // a nice line height that reads as "couple" without boxing the diagram
-      const y = parents[0].y - CARD_H / 2 + 76;
-
-      for (let i = 0; i < parents.length - 1; i++) {
-        const a = parents[i];
-        const b = parents[i + 1];
-
-        const aPt = rightAnchorAt(a, y);
-        const bPt = leftAnchorAt(b, y);
-
-        // only draw if there's room (prevents weird overlap when very close)
-        if (bPt.x - aPt.x > 10) {
-          gLinks.appendChild(makeLine(aPt.x, aPt.y, bPt.x, bPt.y, "rgba(210,230,255,0.70)", 3.2));
-        }
-      }
+  // 1) Draw couple joins once per union (for 2+ parents)
+  for (const [uId, ps] of parentsByUnion.entries()) {
+    if (ps.length >= 2) {
+      drawCoupleJoin(linksG, ps, nodeById.get(uId));
     }
-
-    // Hub point is the union node position
-    const hubX = u.x;
-    const hubY = u.y;
-
-    // Parents -> hub (from bottom edge of parent card)
-    for (const p of parents) {
-      const a = bottomAnchor(p);
-      const d = curvePath(a.x, a.y, hubX, hubY, 0.25);
-      const path = makePath(d, "parent-link");
-      path.setAttribute("stroke", "rgba(210,230,255,0.68)");
-      path.setAttribute("stroke-width", "2.6");
-      gLinks.appendChild(path);
-    }
-
-    // Hub -> children (to top edge of child card)
-    for (const c of kids) {
-      const a = topAnchor(c);
-      const d = curvePath(hubX, hubY, a.x, a.y, 0.18);
-      const path = makePath(d, "child-link");
-      path.setAttribute("stroke", "rgba(255,255,255,0.60)");
-      path.setAttribute("stroke-width", "2.4");
-      gLinks.appendChild(path);
-    }
-
-    // Optional tiny hub dot (subtle). Comment out if you want it completely invisible.
-    const dot = el("circle");
-    dot.setAttribute("cx", String(hubX));
-    dot.setAttribute("cy", String(hubY));
-    dot.setAttribute("r", "2.2");
-    dot.setAttribute("fill", "rgba(255,255,255,0.45)");
-    dot.setAttribute("opacity", "0.9");
-    gLinks.appendChild(dot);
   }
 
-  // ---------- DRAW NODES ----------
-  for (const n of nodes ?? []) {
-    if (n.kind === "union") continue;
+  // 2) Draw remaining links:
+  //    - union -> child: always
+  //    - person -> union: only when that union has <2 parents (single-parent case)
+  for (const lk of links) {
+    const s = nodeById.get(String(lk.sourceId));
+    const t = nodeById.get(String(lk.targetId));
+    if (!s || !t) continue;
 
-    const id = String(n.id);
-    const raw = n._raw ?? {};
+    // Skip person->union if union has 2+ parents (couple join already drawn)
+    if (s.kind === "person" && t.kind === "union") {
+      const uId = String(t.id);
+      const ps = parentsByUnion.get(uId) ?? [];
+      if (ps.length >= 2) continue;
 
-    const name = n.label ?? id;
+      const path = el("path");
+      drawPathCommon(path);
+      drawElbowPath(path, anchor(s, "bottom"), anchor(t, "mid"));
+      linksG.appendChild(path);
+      continue;
+    }
 
-    const birth = yearFromAny(
-      pick(raw, ["birthYear", "bornYear", "birth", "born", "dob", "dateOfBirth"])
-    );
+    // union -> child elbow
+    if (s.kind === "union" && t.kind === "person") {
+      const path = el("path");
+      drawPathCommon(path);
+      drawElbowPath(path, anchor(s, "mid"), anchor(t, "top"));
+      linksG.appendChild(path);
+      continue;
+    }
+  }
 
-    const death = yearFromAny(
-      pick(raw, ["deathYear", "diedYear", "death", "died", "dod", "dateOfDeath"])
-    );
+  // ---- Nodes layer ----
+  const nodesG = el("g");
+  nodesG.setAttribute("class", "tree-nodes");
+  viewport.appendChild(nodesG);
 
-    const meta =
-      birth && death ? `${birth} – ${death}` :
-      birth ? `b. ${birth}` :
-      death ? `d. ${death}` :
-      "";
+  const { CARD_W, CARD_H, CARD_R, PHOTO_SIZE, PHOTO_R } = TREE_CFG.sizing;
 
-    // group at node center
-    const group = el("g");
-    group.setAttribute("transform", `translate(${n.x}, ${n.y})`);
-    group.setAttribute("data-id", id);
-    group.setAttribute("class", "node H");
-    gNodes.appendChild(group);
+  for (const n of nodes) {
+    if (n.kind === "union") {
+      const c = el("circle");
+      c.setAttribute("cx", n.x);
+      c.setAttribute("cy", n.y);
+      c.setAttribute("r", "2.5");
+      c.setAttribute("fill", "rgba(255,255,255,0.08)");
+      nodesG.appendChild(c);
+      continue;
+    }
 
-    // Card (drawn centered)
-    const rect = el("rect");
-    rect.setAttribute("x", String(-CARD_W / 2));
-    rect.setAttribute("y", String(-CARD_H / 2));
-    rect.setAttribute("width", String(CARD_W));
-    rect.setAttribute("height", String(CARD_H));
-    rect.setAttribute("rx", String(CARD_R));
-    rect.setAttribute("ry", String(CARD_R));
-    rect.setAttribute("fill", "rgba(16, 20, 28, 0.92)");
-    rect.setAttribute("stroke", "rgba(255,255,255,0.14)");
-    rect.setAttribute("stroke-width", "1.4");
-    group.appendChild(rect);
+    const g = el("g");
+    const tl = cardTopLeft(n);
+    g.setAttribute("transform", `translate(${tl.x}, ${tl.y})`);
+    nodesG.appendChild(g);
 
-    // Photo circle clip
-    const clipId = `clip_${safeId(id)}`;
-    const clipPath = el("clipPath");
-    clipPath.setAttribute("id", clipId);
+    const card = el("rect");
+    card.setAttribute("x", "0");
+    card.setAttribute("y", "0");
+    card.setAttribute("width", String(CARD_W));
+    card.setAttribute("height", String(CARD_H));
+    card.setAttribute("rx", String(CARD_R));
+    card.setAttribute("ry", String(CARD_R));
+    card.setAttribute("fill", "rgba(12,14,20,0.78)");
+    card.setAttribute("stroke", "rgba(255,255,255,0.18)");
+    card.setAttribute("stroke-width", "1.5");
+    g.appendChild(card);
 
+    const clipId = `clip_${String(n.id).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const clip = el("clipPath");
+    clip.setAttribute("id", clipId);
     const clipCircle = el("circle");
-    clipCircle.setAttribute("cx", "0");
-    clipCircle.setAttribute("cy", String(-CARD_H / 2 + 64));
+    clipCircle.setAttribute("cx", String(CARD_W / 2));
+    clipCircle.setAttribute("cy", String(PHOTO_SIZE / 2 + 14));
     clipCircle.setAttribute("r", String(PHOTO_R));
-    clipPath.appendChild(clipCircle);
-    defs.appendChild(clipPath);
-
-    // Photo background circle (if no photo or while loading)
-    const photoBg = el("circle");
-    photoBg.setAttribute("cx", "0");
-    photoBg.setAttribute("cy", String(-CARD_H / 2 + 64));
-    photoBg.setAttribute("r", String(PHOTO_R + 3));
-    photoBg.setAttribute("fill", "rgba(255,255,255,0.08)");
-    photoBg.setAttribute("stroke", "rgba(255,255,255,0.20)");
-    photoBg.setAttribute("stroke-width", "1.6");
-    group.appendChild(photoBg);
+    clip.appendChild(clipCircle);
+    defs.appendChild(clip);
 
     if (n.photoUrl) {
       const img = el("image");
       img.setAttribute("href", n.photoUrl);
-      img.setAttribute("x", String(-PHOTO_SIZE / 2));
-      img.setAttribute("y", String(-CARD_H / 2 + 64 - PHOTO_SIZE / 2));
+      img.setAttribute("x", String(CARD_W / 2 - PHOTO_SIZE / 2));
+      img.setAttribute("y", String(14));
       img.setAttribute("width", String(PHOTO_SIZE));
       img.setAttribute("height", String(PHOTO_SIZE));
       img.setAttribute("preserveAspectRatio", "xMidYMid slice");
       img.setAttribute("clip-path", `url(#${clipId})`);
-      group.appendChild(img);
+      g.appendChild(img);
+    } else {
+      const ph = el("circle");
+      ph.setAttribute("cx", String(CARD_W / 2));
+      ph.setAttribute("cy", String(PHOTO_SIZE / 2 + 14));
+      ph.setAttribute("r", String(PHOTO_R));
+      ph.setAttribute("fill", "rgba(255,255,255,0.08)");
+      g.appendChild(ph);
     }
 
-    // Name (below photo)
-    const nameText = el("text");
-    nameText.setAttribute("x", "0");
-    nameText.setAttribute("y", String(-CARD_H / 2 + NAME_Y));
-    nameText.setAttribute("text-anchor", "middle");
-    nameText.setAttribute("font-size", "22");
-    nameText.setAttribute("font-weight", "500");
-    nameText.setAttribute("fill", "rgba(245,248,255,0.92)");
-    nameText.textContent = name;
-    group.appendChild(nameText);
+    const ring = el("circle");
+    ring.setAttribute("cx", String(CARD_W / 2));
+    ring.setAttribute("cy", String(PHOTO_SIZE / 2 + 14));
+    ring.setAttribute("r", String(PHOTO_R));
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "rgba(255,255,255,0.20)");
+    ring.setAttribute("stroke-width", "2");
+    g.appendChild(ring);
 
-    // Meta line (birth/death)
-    if (meta) {
-      const metaText = el("text");
-      metaText.setAttribute("x", "0");
-      metaText.setAttribute("y", String(-CARD_H / 2 + META_Y));
-      metaText.setAttribute("text-anchor", "middle");
-      metaText.setAttribute("font-size", "18");
-      metaText.setAttribute("fill", "rgba(245,248,255,0.70)");
-      metaText.textContent = meta;
-      group.appendChild(metaText);
-    }
+    const name = el("text");
+    name.setAttribute("x", String(CARD_W / 2));
+    name.setAttribute("y", String(TREE_CFG.text.NAME_Y));
+    name.setAttribute("text-anchor", "middle");
+    name.setAttribute("dominant-baseline", "middle");
+    name.setAttribute(
+      "style",
+      [
+        "fill: rgba(255,255,255,0.92)",
+        "font-size: 12.5px",
+        "font-weight: 700",
+        "font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+        "pointer-events: none",
+      ].join("; ")
+    );
+    name.textContent = (n.label ?? "").toString();
+    g.appendChild(name);
 
-    // Subtle hover target (optional visual affordance)
-    const hit = el("rect");
-    hit.setAttribute("x", String(-CARD_W / 2));
-    hit.setAttribute("y", String(-CARD_H / 2));
-    hit.setAttribute("width", String(CARD_W));
-    hit.setAttribute("height", String(CARD_H));
-    hit.setAttribute("rx", String(CARD_R));
-    hit.setAttribute("ry", String(CARD_R));
-    hit.setAttribute("fill", "transparent");
-    hit.setAttribute("pointer-events", "all");
-    group.appendChild(hit);
+    const meta = el("text");
+    meta.setAttribute("x", String(CARD_W / 2));
+    meta.setAttribute("y", String(TREE_CFG.text.META_Y));
+    meta.setAttribute("text-anchor", "middle");
+    meta.setAttribute("dominant-baseline", "middle");
+    meta.setAttribute(
+      "style",
+      [
+        "fill: rgba(255,255,255,0.65)",
+        "font-size: 11px",
+        "font-weight: 500",
+        "font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+        "pointer-events: none",
+      ].join("; ")
+    );
+    meta.textContent = pickMeta(n._raw);
+    g.appendChild(meta);
   }
 
   return { viewport };

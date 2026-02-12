@@ -1,12 +1,15 @@
-// tree.js
-// Dagre layout + union nodes for genealogical structure.
-// IMPORTANT: do NOT collapse unions (renderer uses them for couple+hub routing).
-// Adds a post-layout spacing refinement so you can control:
-// - spouse gap
-// - sibling gap
-// - extra gap between unrelated nodes/clusters
+// static/js/tree.js
+// Dagre for Y-levels + deterministic recursive width layout for X.
+// Guarantees:
+// - NO node swapping (spouses keep a stable left-to-right order)
+// - Even sibling spacing
+// - If siblings need more width, their ENTIRE descendant subtrees recursively widen outward
+// - Single child is centered under parents
+// - NEW: if a spouse has no parents (not produced by a union), keep them on the OUTER side of the screen
+//        so siblings stay tighter. Never swap a sibling with a spouse.
 
 import { renderFamilyTree } from "./familyTree.js";
+import { TREE_CFG } from "./treeConfig.js";
 
 function getRelPair(r) {
   const parent =
@@ -89,22 +92,14 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
   const dagre = window.dagre;
   if (!dagre) throw new Error("Dagre not found. Ensure dagre.min.js loads before tree.js.");
 
-  // Dense base layout (we'll refine spacing after)
-  const {
-    rankdir = "TB",
-    ranksep = 50,
-    nodesep = 22,
-    marginx = 12,
-    marginy = 12,
-  } = opts;
+  const cfg = { ...TREE_CFG.dagre, ...opts };
 
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir, ranksep, nodesep, marginx, marginy });
+  g.setGraph(cfg);
   g.setDefaultEdgeLabel(() => ({}));
 
-  // MUST match card sizing in familyTree.js
-  const PERSON_W = 190;
-  const PERSON_H = 200;
+  const PERSON_W = TREE_CFG.sizing.CARD_W;
+  const PERSON_H = TREE_CFG.sizing.CARD_H;
 
   for (const n of graphNodes) {
     const isUnion = n.kind === "union";
@@ -119,6 +114,7 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
 
   const placed = graphNodes.map((n) => {
     const dn = g.node(n.id);
+    // IMPORTANT: dagre gives CENTER coordinates. We keep node.x/node.y as CENTER everywhere.
     return { ...n, x: dn?.x ?? 0, y: dn?.y ?? 0 };
   });
 
@@ -131,10 +127,14 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
     maxY = Math.max(maxY, n.y);
   }
 
-  const pad = 22;
+  const pad = TREE_CFG.view.pad;
   for (const n of placed) {
     n.x = n.x - minX + pad;
     n.y = n.y - minY + pad;
+
+    // freeze original X for stable spouse ordering
+    n._baseX = n.x;
+    n._baseY = n.y;
   }
 
   return {
@@ -144,123 +144,291 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
   };
 }
 
-// Post-layout spacing refinement:
-// - spouses in same union: fixed gap
-// - siblings under same union: fixed gap
-// - unrelated nodes on same row: enforced minimum "cluster gap"
-function refineSpacing(laidNodes, laidLinks, opts = {}) {
-  const {
-    SPOUSE_GAP = 14,      // gap BETWEEN spouse cards
-    SIBLING_GAP = 12,     // gap BETWEEN sibling cards
-    CLUSTER_GAP = 70,     // extra breathing room between unrelated nodes on a row
-    CARD_W = 190,         // match familyTree.js
-  } = opts;
+function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
+  const CARD_W = TREE_CFG.sizing.CARD_W;
+  const { SPOUSE_GAP, SIBLING_GAP, CLUSTER_GAP } = TREE_CFG.spacing;
 
   const byId = new Map(laidNodes.map((n) => [String(n.id), n]));
   const isUnion = (id) => byId.get(String(id))?.kind === "union";
 
-  // unionId -> { parents:[], children:[] }
+  // unionId -> { parents:Set, children:Set }
   const unions = new Map();
-
-  for (const e of laidLinks) {
-    const s = String(e.sourceId);
-    const t = String(e.targetId);
+  for (const l of laidLinks) {
+    const s = String(l.sourceId);
+    const t = String(l.targetId);
 
     if (isUnion(t) && !isUnion(s)) {
-      if (!unions.has(t)) unions.set(t, { parents: [], children: [] });
-      unions.get(t).parents.push(s);
+      if (!unions.has(t)) unions.set(t, { parents: new Set(), children: new Set() });
+      unions.get(t).parents.add(s);
     } else if (isUnion(s) && !isUnion(t)) {
-      if (!unions.has(s)) unions.set(s, { parents: [], children: [] });
-      unions.get(s).children.push(t);
+      if (!unions.has(s)) unions.set(s, { parents: new Set(), children: new Set() });
+      unions.get(s).children.add(t);
     }
   }
 
-  function placeRowCentered(ids, cx, gap) {
-    const arr = [...new Set(ids)].map((id) => byId.get(id)).filter(Boolean);
-    arr.sort((a, b) => a.x - b.x);
-
-    const step = CARD_W + gap;
-    const totalW = arr.length > 0 ? (arr.length - 1) * step : 0;
-    const startX = cx - totalW / 2;
-
-    for (let i = 0; i < arr.length; i++) {
-      arr[i].x = startX + i * step;
-    }
-  }
-
-  // 1) Enforce spouse + sibling spacing per union
+  // personId -> unionIds where this person is a parent
+  const unionsByParent = new Map();
   for (const [uId, pc] of unions.entries()) {
-    const u = byId.get(uId);
-    if (!u) continue;
-
-    const parentIds = pc.parents.filter((id) => byId.has(id));
-    const childIds = pc.children.filter((id) => byId.has(id));
-
-    if (parentIds.length) placeRowCentered(parentIds, u.x, SPOUSE_GAP);
-    if (childIds.length) placeRowCentered(childIds, u.x, SIBLING_GAP);
-
-    // Keep union centered between spouses (improves routing)
-    if (parentIds.length >= 2) {
-      const ps = parentIds
-        .map((id) => byId.get(id))
-        .filter(Boolean)
-        .sort((a, b) => a.x - b.x);
-      u.x = (ps[0].x + ps[ps.length - 1].x) / 2;
+    for (const pid of pc.parents) {
+      if (!unionsByParent.has(pid)) unionsByParent.set(pid, []);
+      unionsByParent.get(pid).push(uId);
     }
   }
 
-  // 2) Cluster separation (simple collision push on each y band)
-  const bands = new Map();
-  const BAND = 18; // y tolerance for "same row"
+  // child-> union that produced them (for roots detection)
+  const producedByUnion = new Map();
+  for (const [uId, pc] of unions.entries()) {
+    for (const cid of pc.children) producedByUnion.set(String(cid), String(uId));
+  }
 
+  const sortByBaseX = (ids) =>
+    ids
+      .map((id) => byId.get(String(id)))
+      .filter(Boolean)
+      .sort((a, b) => (a._baseX ?? a.x) - (b._baseX ?? b.x))
+      .map((n) => String(n.id));
+
+  // ---- Width computation (bottom-up) ----
+  const personWidthMemo = new Map();
+  const unionWidthMemo = new Map();
+
+  function personSubtreeWidth(personId, visiting = new Set()) {
+    personId = String(personId);
+    if (personWidthMemo.has(personId)) return personWidthMemo.get(personId);
+
+    if (visiting.has(personId)) return CARD_W;
+    visiting.add(personId);
+
+    const childUnions = unionsByParent.get(personId) ?? [];
+    if (!childUnions.length) {
+      personWidthMemo.set(personId, CARD_W);
+      visiting.delete(personId);
+      return CARD_W;
+    }
+
+    const widths = childUnions.map((uId) => unionSubtreeWidth(uId, visiting));
+    const total = widths.reduce((a, b) => a + b, 0) + Math.max(0, widths.length - 1) * CLUSTER_GAP;
+
+    const w = Math.max(CARD_W, total);
+    personWidthMemo.set(personId, w);
+    visiting.delete(personId);
+    return w;
+  }
+
+  function unionSubtreeWidth(unionId, visiting = new Set()) {
+    unionId = String(unionId);
+    if (unionWidthMemo.has(unionId)) return unionWidthMemo.get(unionId);
+
+    const pc = unions.get(unionId);
+    if (!pc) {
+      unionWidthMemo.set(unionId, CARD_W);
+      return CARD_W;
+    }
+
+    const parentIds = sortByBaseX([...pc.parents]);
+    const childIds = sortByBaseX([...pc.children]);
+
+    const spouseBlockW =
+      parentIds.length * CARD_W + Math.max(0, parentIds.length - 1) * SPOUSE_GAP;
+
+    const childWidths = childIds.map((cid) => personSubtreeWidth(cid, visiting));
+    const childrenBlockW =
+      childWidths.reduce((a, b) => a + b, 0) + Math.max(0, childWidths.length - 1) * SIBLING_GAP;
+
+    const w = Math.max(spouseBlockW, childrenBlockW, CARD_W);
+    unionWidthMemo.set(unionId, w);
+    return w;
+  }
+
+  // ---- Find root unions (TOP of tree) ----
+  const rootUnions = [];
+  for (const [uId, pc] of unions.entries()) {
+    const parentIds = [...pc.parents].map(String);
+    const isRoot = parentIds.length > 0 && parentIds.every((pid) => !producedByUnion.has(pid));
+    if (isRoot) rootUnions.push(uId);
+  }
+
+  rootUnions.sort((a, b) => {
+    const ap = unions.get(a)?.parents ? sortByBaseX([...unions.get(a).parents]) : [];
+    const bp = unions.get(b)?.parents ? sortByBaseX([...unions.get(b).parents]) : [];
+    const ax = ap.length ? (byId.get(ap[0])?._baseX ?? byId.get(ap[0])?.x ?? 0) : 0;
+    const bx = bp.length ? (byId.get(bp[0])?._baseX ?? byId.get(bp[0])?.x ?? 0) : 0;
+    return ax - bx;
+  });
+
+  const assignedUnion = new Set();
+  const assignedPerson = new Set();
+
+  // Global anchor used to define "outer part of the screen"
+  const ANCHOR_X = (bounds?.width ?? TREE_CFG.view.minWidth) / 2;
+
+  function orderParentsOuterOutsiders(parentIds, unionCenterX) {
+    // Base stable order first
+    const ordered = sortByBaseX(parentIds);
+
+    // Outsider = spouse that does NOT have a parent union (no parents in tree)
+    const outsiders = ordered.filter((pid) => !producedByUnion.has(String(pid)));
+    if (!outsiders.length) return ordered;
+
+    const insiders = ordered.filter((pid) => producedByUnion.has(String(pid)));
+
+    // "Outer side" depends on which half of the screen the union lives on
+    const outerIsLeft = unionCenterX < ANCHOR_X;
+
+    // Put outsiders on the outer end:
+    // - Left half: outsiders first (leftmost)
+    // - Right half: outsiders last (rightmost)
+    // This never swaps a sibling with spouse; it only reorders the spouse row.
+    return outerIsLeft ? [...outsiders, ...insiders] : [...insiders, ...outsiders];
+  }
+
+  function setSpousesAroundCenter(parentIds, centerX) {
+    const parents = orderParentsOuterOutsiders(parentIds, centerX);
+    const n = parents.length;
+    if (!n) return;
+
+    const step = CARD_W + SPOUSE_GAP;
+    const totalW = (n - 1) * step;
+    const startX = centerX - totalW / 2;
+
+    for (let i = 0; i < n; i++) {
+      const pid = parents[i];
+      const p = byId.get(pid);
+      if (!p) continue;
+      p.x = startX + i * step; // CENTER X
+      assignedPerson.add(pid);
+    }
+  }
+
+  function setChildrenEven(childIds, centerX) {
+    const kids = sortByBaseX(childIds);
+    const n = kids.length;
+    if (!n) return;
+
+    if (n === 1) {
+      const c = byId.get(kids[0]);
+      if (c) {
+        c.x = centerX; // CENTER X
+        assignedPerson.add(kids[0]);
+      }
+      return;
+    }
+
+    const widths = kids.map((cid) => personSubtreeWidth(cid));
+    const totalW = widths.reduce((a, b) => a + b, 0) + (n - 1) * SIBLING_GAP;
+    let cursor = centerX - totalW / 2;
+
+    for (let i = 0; i < n; i++) {
+      const cid = kids[i];
+      const w = widths[i];
+      const mid = cursor + w / 2;
+
+      const child = byId.get(cid);
+      if (child) {
+        child.x = mid; // CENTER X
+        assignedPerson.add(cid);
+      }
+
+      cursor += w + SIBLING_GAP;
+    }
+  }
+
+  function layoutUnion(unionId, centerX) {
+    unionId = String(unionId);
+    const u = byId.get(unionId);
+    if (u) u.x = centerX; // union node itself is a point; keep CENTER X
+    assignedUnion.add(unionId);
+
+    const pc = unions.get(unionId);
+    if (!pc) return;
+
+    const parents = [...pc.parents].map(String);
+    const kids = [...pc.children].map(String);
+
+    setSpousesAroundCenter(parents, centerX);
+    setChildrenEven(kids, centerX);
+
+    for (const cid of kids) {
+      const child = byId.get(cid);
+      if (!child) continue;
+
+      const childUnions = unionsByParent.get(cid) ?? [];
+      for (const cu of childUnions) layoutUnion(cu, child.x);
+    }
+  }
+
+  // Place root unions across the page, anchored to center
+  const rootWs = rootUnions.map((uId) => unionSubtreeWidth(uId));
+  const rootTotalW =
+    rootWs.reduce((a, b) => a + b, 0) + Math.max(0, rootWs.length - 1) * CLUSTER_GAP;
+
+  let cursor = ANCHOR_X - rootTotalW / 2;
+  for (let i = 0; i < rootUnions.length; i++) {
+    const uId = rootUnions[i];
+    const w = rootWs[i];
+    const mid = cursor + w / 2;
+
+    layoutUnion(uId, mid);
+
+    cursor += w + CLUSTER_GAP;
+  }
+
+  // Any person not assigned (isolated) keep at baseX
   for (const n of laidNodes) {
     if (n.kind === "union") continue;
-    const key = Math.round(n.y / BAND);
-    if (!bands.has(key)) bands.set(key, []);
-    bands.get(key).push(n);
-  }
-
-  for (const [, row] of bands.entries()) {
-    row.sort((a, b) => a.x - b.x);
-    let lastRight = -Infinity;
-
-    for (const n of row) {
-      const left = n.x - CARD_W / 2;
-      if (left < lastRight + CLUSTER_GAP) {
-        const push = (lastRight + CLUSTER_GAP) - left;
-        n.x += push;
-      }
-      lastRight = n.x + CARD_W / 2;
+    const id = String(n.id);
+    if (!assignedPerson.has(id)) {
+      n.x = typeof n._baseX === "number" ? n._baseX : n.x;
     }
   }
 
-  return laidNodes;
+  // Re-normalize X after layout so the whole thing is tight in viewBox
+  let minX = Infinity, maxX = -Infinity;
+  for (const n of laidNodes) {
+    if (typeof n.x !== "number") continue;
+    minX = Math.min(minX, n.x);
+    maxX = Math.max(maxX, n.x);
+  }
+
+  const pad = TREE_CFG.view.pad;
+  const shiftX = (minX === Infinity) ? 0 : (pad - minX);
+  for (const n of laidNodes) n.x += shiftX;
+
+  const newWidth = (maxX - minX) + pad * 2;
+
+  return { nodes: laidNodes, width: newWidth };
 }
 
 function enablePanZoom(svg, viewport) {
   let scale = 1, tx = 0, ty = 0;
   const apply = () => viewport.setAttribute("transform", `translate(${tx}, ${ty}) scale(${scale})`);
 
-  svg.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    const rect = svg.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+  svg.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
 
-    const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(4, Math.max(0.2, scale * factor));
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newScale = Math.min(4, Math.max(0.2, scale * factor));
 
-    const sx = (mx - tx) / scale;
-    const sy = (my - ty) / scale;
+      const sx = (mx - tx) / scale;
+      const sy = (my - ty) / scale;
 
-    scale = newScale;
-    tx = mx - sx * scale;
-    ty = my - sy * scale;
+      scale = newScale;
+      tx = mx - sx * scale;
+      ty = my - sy * scale;
 
-    apply();
-  }, { passive: false });
+      apply();
+    },
+    { passive: false }
+  );
 
-  let dragging = false, lastX = 0, lastY = 0;
+  let dragging = false,
+    lastX = 0,
+    lastY = 0;
 
   svg.addEventListener("pointerdown", (e) => {
     dragging = true;
@@ -271,8 +439,8 @@ function enablePanZoom(svg, viewport) {
 
   svg.addEventListener("pointermove", (e) => {
     if (!dragging) return;
-    tx += (e.clientX - lastX);
-    ty += (e.clientY - lastY);
+    tx += e.clientX - lastX;
+    ty += e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
     apply();
@@ -280,7 +448,9 @@ function enablePanZoom(svg, viewport) {
 
   svg.addEventListener("pointerup", (e) => {
     dragging = false;
-    try { svg.releasePointerCapture(e.pointerId); } catch {}
+    try {
+      svg.releasePointerCapture(e.pointerId);
+    } catch {}
   });
 
   apply();
@@ -299,21 +469,17 @@ export async function initTree(treeName = "gupta") {
   const data = await loadTreeData(treeName);
   const { nodes: graphNodes, links: graphLinks } = buildGeneDAG(data);
 
-  const laid = dagreLayout(graphNodes, graphLinks, { rankdir: "TB" });
+  const laid = dagreLayout(graphNodes, graphLinks, TREE_CFG.dagre);
+  const laidX = recursiveWidthLayout(laid.nodes, laid.links, laid.bounds);
 
-  // YOUR CONTROL KNOBS:
-  refineSpacing(laid.nodes, laid.links, {
-    SPOUSE_GAP: 12,   // tighter spouses
-    SIBLING_GAP: 10,  // tighter siblings
-    CLUSTER_GAP: 70,  // keep unrelated branches from crushing each other
-    CARD_W: 190,
-  });
+  const width = Math.max(TREE_CFG.view.minWidth, laidX.width + TREE_CFG.view.extra);
+  const height = Math.max(TREE_CFG.view.minHeight, laid.bounds.height + TREE_CFG.view.extra);
 
   const result = renderFamilyTree(svg, {
-    nodes: laid.nodes,
+    nodes: laidX.nodes,
     links: laid.links,
-    width: Math.max(1050, laid.bounds.width + 60),
-    height: Math.max(620, laid.bounds.height + 60),
+    width,
+    height,
   });
 
   enablePanZoom(svg, result.viewport);
