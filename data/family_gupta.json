@@ -1,35 +1,152 @@
 {
   "people": [
-    { "born": "1888", "died": "1970", "id": "paresh", "name": "Paresh Chandra Gupta", "photo": "/static/uploads/gupta/paresh.png" },
-    { "born": "1904", "died": "1999", "id": "nilima", "name": "Nilima Gupta", "photo": "/static/uploads/gupta/nilima.png" },
+    {
+      "id": "paresh",
+      "name": "Paresh Chandra Gupta",
+      "born": "1888",
+      "died": "1970",
+      "photo": "/static/uploads/gupta/paresh.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
+    {
+      "id": "nilima",
+      "name": "Nilima Gupta",
+      "born": "1904",
+      "died": "1999",
+      "photo": "/static/uploads/gupta/nilima.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
 
-    { "born": "1928", "died": "2015", "id": "prosun", "name": "Prosun Gupta", "photo": "/static/uploads/gupta/prosun.png" },
-    { "born": "1936", "died": "2019", "id": "dipali", "name": "Dipali Gupta", "photo": "/static/uploads/gupta/dipali.png" },
+    {
+      "id": "prosun",
+      "name": "Prosun Gupta",
+      "born": "1928",
+      "died": "2015",
+      "photo": "/static/uploads/gupta/prosun.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
+    {
+      "id": "dipali",
+      "name": "Dipali Gupta",
+      "born": "1936",
+      "died": "2019",
+      "photo": "/static/uploads/gupta/dipali.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
 
-    { "born": "1956", "id": "indranil", "name": "Indranil Gupta", "photo": "/static/uploads/gupta/indranil.png" },
-    { "born": "1962", "id": "sharmistha", "name": "Sharmistha Gupta", "photo": "/static/uploads/gupta/sharmistha.png" },
+    {
+      "id": "indranil",
+      "name": "Indranil Gupta",
+      "born": "1956",
+      "photo": "/static/uploads/gupta/indranil.png",
+      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+    },
+    {
+      "id": "sharmistha",
+      "name": "Sharmistha Gupta",
+      "born": "1962",
+      "photo": "/static/uploads/gupta/sharmistha.png",
+      "location": { "city": "London", "region": "England", "country": "UK", "lat": 51.5072, "lng": -0.1276 }
+    },
 
-    { "born": "1960", "id": "rumjhum", "name": "Rumjhum Chatterjee", "photo": "/static/uploads/gupta/rumjhum.png" },
-    { "born": "1958", "id": "vinayak", "name": "Vinayak Chatterjee", "photo": "/static/uploads/gupta/vinayak.png" },
+    {
+      "id": "rumjhum",
+      "name": "Rumjhum Chatterjee",
+      "born": "1960",
+      "photo": "/static/uploads/gupta/rumjhum.png",
+      "location": { "city": "Bengaluru", "region": "Karnataka", "country": "India", "lat": 12.9716, "lng": 77.5946 }
+    },
+    {
+      "id": "vinayak",
+      "name": "Vinayak Chatterjee",
+      "born": "1958",
+      "photo": "/static/uploads/gupta/vinayak.png",
+      "location": { "city": "Dubai", "region": "Dubai", "country": "UAE", "lat": 25.2048, "lng": 55.2708 }
+    },
 
-    { "born": "1967", "id": "indrajit", "name": "Indrajit Gupta", "photo": "/static/uploads/gupta/indrajit.png" },
-    { "born": "1969", "id": "nanda", "name": "Nanda Majumdar", "photo": "/static/uploads/gupta/nanda.png" },
+    {
+      "id": "indrajit",
+      "name": "Indrajit Gupta",
+      "born": "1967",
+      "photo": "/static/uploads/gupta/indrajit.png",
+      "location": { "city": "San Francisco", "region": "CA", "country": "USA", "lat": 37.7749, "lng": -122.4194 }
+    },
+    {
+      "id": "nanda",
+      "name": "Nanda Majumdar",
+      "born": "1969",
+      "photo": "/static/uploads/gupta/nanda.png",
+      "location": { "city": "Seattle", "region": "WA", "country": "USA", "lat": 47.6062, "lng": -122.3321 }
+    },
 
-    { "born": "1988", "id": "rohini", "name": "Rohini Runfola", "photo": "/static/uploads/gupta/rohini.png" },
-    { "born": "1987", "id": "frank", "name": "Frank Runfola", "photo": "/static/uploads/gupta/frank.png" },
+    {
+      "id": "rohini",
+      "name": "Rohini Runfola",
+      "born": "1988",
+      "photo": "/static/uploads/gupta/rohini.png",
+      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+    },
+    {
+      "id": "frank",
+      "name": "Frank Runfola",
+      "born": "1987",
+      "photo": "/static/uploads/gupta/frank.png",
+      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+    },
 
-    { "born": "2016", "id": "caleb", "name": "Caleb Runfola", "photo": "/static/uploads/gupta/caleb.png" },
-    { "born": "2018", "id": "adalina", "name": "Adalina Runfola", "photo": "/static/uploads/gupta/adalina.png" },
+    {
+      "id": "caleb",
+      "name": "Caleb Runfola",
+      "born": "2016",
+      "photo": "/static/uploads/gupta/caleb.png",
+      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+    },
+    {
+      "id": "adalina",
+      "name": "Adalina Runfola",
+      "born": "2018",
+      "photo": "/static/uploads/gupta/adalina.png",
+      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+    },
 
-    { "born": "1986", "id": "nayantara", "name": "Nayantara Kochhar", "photo": "/static/uploads/gupta/nayantara.png" },
-    { "born": "1984", "id": "shailesh", "name": "Shailesh Kochhar", "photo": "/static/uploads/gupta/shailesh.png" },
+    {
+      "id": "nayantara",
+      "name": "Nayantara Kochhar",
+      "born": "1986",
+      "photo": "/static/uploads/gupta/nayantara.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
+    {
+      "id": "shailesh",
+      "name": "Shailesh Kochhar",
+      "born": "1984",
+      "photo": "/static/uploads/gupta/shailesh.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
+    {
+      "id": "maahir",
+      "name": "Maahir Kochhar",
+      "born": "2022",
+      "photo": "/static/uploads/gupta/maahir.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    },
 
-    { "born": "2022", "id": "maahir", "name": "Maahir Kochhar", "photo": "/static/uploads/gupta/maahir.png" },
-
-    { "born": "2001", "id": "atreyee", "name": "Atreyee Gupta", "photo": "/static/uploads/gupta/atreyee.png" },
-    { "born": "2005", "id": "auroni", "name": "Auroni Gupta", "photo": "/static/uploads/gupta/auroni.png" }
-
+    {
+      "id": "atreyee",
+      "name": "Atreyee Gupta",
+      "born": "2001",
+      "photo": "/static/uploads/gupta/atreyee.png",
+      "location": { "city": "Toronto", "region": "ON", "country": "Canada", "lat": 43.6532, "lng": -79.3832 }
+    },
+    {
+      "id": "auroni",
+      "name": "Auroni Gupta",
+      "born": "2005",
+      "photo": "/static/uploads/gupta/auroni.png",
+      "location": { "city": "Kolkata", "region": "West Bengal", "country": "India", "lat": 22.5726, "lng": 88.3639 }
+    }
   ],
+
   "relationships": [
     { "type": "spouse", "a": "paresh", "b": "nilima" },
     { "type": "spouse", "a": "prosun", "b": "dipali" },
@@ -70,9 +187,6 @@
     { "child": "adalina", "parent": "frank" },
 
     { "child": "maahir", "parent": "nayantara" },
-    { "child": "maahir", "parent": "shailesh" },
-
-    { "type": "spouse", "a": "mom", "b": "dad" }
-
+    { "child": "maahir", "parent": "shailesh" }
   ]
 }

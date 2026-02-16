@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -5,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LineAgeMap</title>
     <link rel="stylesheet" href="/static/css/styles.css" />
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="shortcut icon" href="/static/img/favicon.ico">
   </head>
   <body>
     <div class="appWrap">
@@ -53,10 +54,25 @@
       <main>
         <section class="landing2">
           <div class="landing2-hero">
-            <h1 class="landing2-headline">Explore your family history</h1>
-            <p class="landing2-sub">
-              Pick a view — structure, story, or place.
-            </p>
+            <div class="landing2-titleRow" aria-label="Explore your family history">
+              <span class="landing2-flourish" aria-hidden="true">
+                <svg viewBox="0 0 120 30">
+                  <path d="M2 15c14 0 14-10 28-10 10 0 12 8 20 8s10-8 20-8c14 0 14 10 28 10" />
+                  <path d="M40 22c6 0 7-6 12-6s6 6 12 6" />
+                  <circle cx="18" cy="7" r="1.7" />
+                  <circle cx="102" cy="7" r="1.7" />
+                </svg>
+              </span>
+              <h1 class="landing2-headline">Explore your family history</h1>
+              <span class="landing2-flourish" aria-hidden="true">
+                <svg viewBox="0 0 120 30">
+                  <path d="M2 15c14 0 14-10 28-10 10 0 12 8 20 8s10-8 20-8c14 0 14 10 28 10" />
+                  <path d="M40 22c6 0 7-6 12-6s6 6 12 6" />
+                  <circle cx="18" cy="7" r="1.7" />
+                  <circle cx="102" cy="7" r="1.7" />
+                </svg>
+              </span>
+            </div>
           </div>
 
           <div class="landing2-tiles" role="navigation" aria-label="Choose a view">
@@ -98,16 +114,29 @@
               <div class="tileIcon" aria-hidden="true">
                 <!-- Timeline icon -->
                 <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M7 7h14" />
-                  <path d="M7 12h14" />
-                  <path d="M7 17h14" />
-                  <circle cx="7" cy="7" r="1.5" />
-                  <circle cx="7" cy="12" r="1.5" />
-                  <circle cx="7" cy="17" r="1.5" />
+                  <path d="M5 12h14" />
+                  <circle cx="7" cy="12" r="1.6" />
+                  <circle cx="12" cy="12" r="1.6" />
+                  <circle cx="17" cy="12" r="1.6" />
                 </svg>
               </div>
               <div class="tileLabel">Timeline</div>
             </a>
+          </div>
+
+          <div class="landing2-bottomFlourishes" aria-hidden="true">
+            <span class="corner left">
+              <svg viewBox="0 0 120 30">
+                <path d="M2 20c12 0 14-10 28-10 10 0 12 8 20 8s10-8 20-8c14 0 14 10 28 10" />
+                <path d="M46 26c5 0 6-5 10-5s5 5 10 5" />
+              </svg>
+            </span>
+            <span class="corner right">
+              <svg viewBox="0 0 120 30">
+                <path d="M2 20c12 0 14-10 28-10 10 0 12 8 20 8s10-8 20-8c14 0 14 10 28 10" />
+                <path d="M46 26c5 0 6-5 10-5s5 5 10 5" />
+              </svg>
+            </span>
           </div>
 
           <!-- subtle ornament (still clean) -->

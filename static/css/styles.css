@@ -63,6 +63,18 @@ body{
   line-height: 1.1;
 }
 
+/* Centered header variant (used on Map mock) */
+.brandCenter{
+  text-decoration: none;
+  color: inherit;
+  text-align: center;
+}
+.brandCenter .logo{
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(26px, 3.6vw, 40px);
+  letter-spacing: 0.02em;
+}
+
 .brand .tag{
   margin-top: 2px;
   font-size: 12.5px;
@@ -700,7 +712,7 @@ main{
   fill: none;
 }
 
-/* Landing (compact tiles, inviting vibe) */
+/* Landing (tile buttons like the mock) */
 .landing2{
   padding: 22px 0 10px;
   text-align: center;
@@ -710,6 +722,13 @@ main{
   padding: 10px 0 14px;
 }
 
+.landing2-titleRow{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
 .landing2-headline{
   margin: 0;
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
@@ -717,6 +736,21 @@ main{
   font-size: clamp(30px, 4.4vw, 46px);
   letter-spacing: -0.01em;
   color: rgba(64, 52, 38, 0.92);
+}
+
+.landing2-flourish{
+  width: 74px;
+  height: 22px;
+  opacity: 0.65;
+}
+.landing2-flourish svg{
+  width: 100%;
+  height: 100%;
+  stroke: rgba(64, 52, 38, 0.55);
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .landing2-sub{
@@ -735,11 +769,11 @@ main{
   gap: 18px;
 }
 
-/* ~half size vs previous big squares */
+/* Square tiles */
 .landing2-tile{
-  width: min(150px, 100%);
-  height: 150px;
-  border-radius: 16px;
+  width: min(210px, 100%);
+  height: 190px;
+  border-radius: 18px;
 
   display: grid;
   place-items: center;
@@ -791,6 +825,32 @@ main{
   letter-spacing: 0.02em;
 }
 
+/* Bottom corner flourishes near the tile row */
+.landing2-bottomFlourishes{
+  position: relative;
+  width: min(740px, 92%);
+  height: 0;
+  margin: 6px auto 0;
+}
+.landing2-bottomFlourishes .corner{
+  position: absolute;
+  top: -4px;
+  width: 84px;
+  height: 26px;
+  opacity: 0.55;
+}
+.landing2-bottomFlourishes .corner.left{ left: 0; transform: scaleX(-1); }
+.landing2-bottomFlourishes .corner.right{ right: 0; }
+.landing2-bottomFlourishes .corner svg{
+  width: 100%;
+  height: 100%;
+  stroke: rgba(64, 52, 38, 0.45);
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Small, tasteful ornament under tiles */
 .landing2-ornament{
   margin: 18px auto 0;
@@ -816,8 +876,103 @@ main{
   }
   .landing2-tile{
     width: min(240px, 100%);
-    height: 130px;
+    height: 150px;
     grid-auto-flow: row;
   }
+  .landing2-flourish{ display:none; }
+  .landing2-bottomFlourishes{ display:none; }
+}
+
+.map-shell{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px 16px 10px;
+}
+
+.map-panel{
+  background: rgba(246,242,234,.85);
+  border: 1px solid rgba(122,79,60,.16);
+  border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.05);
+  padding: 18px;
+}
+
+.map-canvas{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255,255,255,.35);
+}
+
+.map-bg{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(.85) contrast(.95);
+  opacity: .95;
+}
+
+.map-pins{
+  position: absolute;
+  inset: 0;
+}
+
+.avatar-pin{
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.avatar-pin-img{
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,.92);
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+.avatar-pin-label{
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(122,79,60,.14);
+  border-radius: 14px;
+  padding: 8px 10px;
+  box-shadow: 0 10px 22px rgba(0,0,0,.08);
+  max-width: 220px;
+}
+
+.avatar-pin-name{
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(74,46,35,.92);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar-pin-city{
+  font-family: var(--sans);
+  font-size: 12px;
+  color: rgba(74,46,35,.70);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 700px){
+  .avatar-pin-img{ width: 40px; height: 40px; }
+  .avatar-pin-label{ padding: 7px 9px; border-radius: 12px; max-width: 190px; }
+  .avatar-pin-name{ font-size: 12px; }
+  .avatar-pin-city{ font-size: 11px; }
 }
 

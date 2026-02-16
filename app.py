@@ -2,12 +2,11 @@ from __future__ import annotations
 
 ################################################################
 # RENDER HOSTING
-#   - Update App to Use Persistent Disk
+#   - Persistent disk directory (Render sets DATA_DIR)
 #---------------------------------------------------------------
 import os
 
 DATA_DIR = os.environ.get("DATA_DIR", "data")
-
 os.makedirs(DATA_DIR, exist_ok=True)
 ################################################################
 
@@ -15,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template
 
 APP_DIR = Path(__file__).parent
 
@@ -41,7 +40,14 @@ def load_family_file(path: Path) -> Dict[str, Any]:
 
 @app.get("/")
 def index():
+    # Home page
     return render_template("landing.html")
+
+
+# Alias route (optional). Keep if you want /index to work.
+@app.get("/index")
+def index_alias():
+    return render_template("index.html")
 
 
 @app.get("/tree")
@@ -66,6 +72,7 @@ def api_tree(name: str):
     if not path.exists():
         return jsonify({"error": "not found", "expected_file": str(path)}), 404
     return jsonify(load_family_file(path))
+
 
 #####################
 # LOCAL RUN
