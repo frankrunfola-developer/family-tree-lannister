@@ -50,10 +50,8 @@
 
   <!-- MAP PANEL -->
   <main class="map-shell">
-
     <section class="map-panel">
       <div class="map-canvas" id="mapCanvas" aria-label="Family map">
-        <!-- world map background -->
         <img
           class="map-bg"
           src="{{ url_for('static', filename='img/world-muted.png') }}"
@@ -63,10 +61,9 @@
         <div class="map-pins" id="mapPins"></div>
       </div>
     </section>
-
   </main>
 
-  <!-- FOOTER (matches your screenshot vibe) -->
+  <!-- FOOTER -->
   <footer class="footer">
     <div class="footer-inner">
       <div>
@@ -77,110 +74,154 @@
     </div>
   </footer>
 
-<script>
-  // Which family file to load (matches /api/tree/<name>)
-  const FAMILY_NAME = "gupta";
+  <script>
+    // Which family file to load (matches /api/tree/<name>)
+    const FAMILY_NAME = "gupta";
 
-  // Equirectangular projection (simple + clean)
-  function project(lat, lng, width, height) {
-    const x = (lng + 180) / 360 * width;
-    const y = (90 - lat) / 180 * height;
-    return { x, y };
-  }
-
-  function parseYear(val) {
-    if (val == null) return null;
-    const n = parseInt(String(val).trim(), 10);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function calcAge(bornStr, diedStr) {
-    const born = parseYear(bornStr);
-    if (!born) return null;
-
-    const died = parseYear(diedStr);
-    const nowYear = new Date().getFullYear();
-    const end = died || nowYear;
-
-    const age = end - born;
-    return (age >= 0 && age <= 130) ? age : null;
-  }
-
-  function safeText(v) {
-    return (v ?? "").toString();
-  }
-
-  function buildPin(person) {
-    const current = person.current || null;
-    if (!current || current.lat == null || current.lng == null) return null;
-
-    const age = calcAge(person.born, person.died);
-    const name = safeText(person.name);
-    const city = safeText(current.city);
-
-    const el = document.createElement("div");
-    el.className = "avatar-pin";
-
-    const img = document.createElement("img");
-    img.className = "avatar-pin-img";
-    img.alt = name;
-    img.src = person.photo || "{{ url_for('static', filename='img/placeholder-avatar.png') }}";
-
-    const label = document.createElement("div");
-    label.className = "avatar-pin-label";
-
-    const top = document.createElement("div");
-    top.className = "avatar-pin-name";
-    top.textContent = age != null ? `${name} • ${age}` : name;
-
-    const bottom = document.createElement("div");
-    bottom.className = "avatar-pin-city";
-    bottom.textContent = city || "—";
-
-    label.appendChild(top);
-    label.appendChild(bottom);
-
-    el.appendChild(img);
-    el.appendChild(label);
-
-    return { el, lat: current.lat, lng: current.lng };
-  }
-
-  async function initMapPins() {
-    const canvas = document.getElementById("mapCanvas");
-    const pinsLayer = document.getElementById("mapPins");
-
-    const res = await fetch(`/api/tree/${FAMILY_NAME}`);
-    const data = await res.json();
-    const people = Array.isArray(data.people) ? data.people : [];
-
-    const pins = [];
-    for (const p of people) {
-      const pin = buildPin(p);
-      if (pin) pins.push(pin);
+    // Projection:
+    // x = (lng + 180) / 360 * width
+    // y = (90 - lat) / 180 * height
+    function project(lat, lng, width, height) {
+      const x = (lng + 180) / 360 * width;
+      const y = (90 - lat) / 180 * height;
+      return { x, y };
     }
 
-    function layout() {
-      pinsLayer.innerHTML = "";
-      const rect = canvas.getBoundingClientRect();
-      const w = rect.width;
-      const h = rect.height;
+    function parseYear(val) {
+      if (val == null) return null;
+      const n = parseInt(String(val).trim(), 10);
+      return Number.isFinite(n) ? n : null;
+    }
 
-      for (const pin of pins) {
-        const { x, y } = project(pin.lat, pin.lng, w, h);
-        const node = pin.el;
-        node.style.left = `${x}px`;
-        node.style.top = `${y}px`;
-        pinsLayer.appendChild(node);
+    function calcAge(bornStr, diedStr) {
+      const born = parseYear(bornStr);
+      if (!born) return null;
+
+      const died = parseYear(diedStr);
+      const nowYear = new Date().getFullYear();
+      const end = died || nowYear;
+
+      const age = end - born;
+      return (age >= 0 && age <= 130) ? age : null;
+    }
+
+    function safeText(v) {
+      return (v ?? "").toString();
+    }
+
+    function buildPin(person) {
+      const current = person.current || null;
+      if (!current || current.lat == null || current.lng == null) return null;
+
+      const age = calcAge(person.born, person.died);
+      const name = safeText(person.name);
+      const city = safeText(current.city);
+
+      const el = document.createElement("div");
+      el.className = "avatar-pin";
+
+      const img = document.createElement("img");
+      img.className = "avatar-pin-img";
+      img.alt = name;
+      img.src = person.photo || "{{ url_for('static', filename='img/placeholder-avatar.png') }}";
+
+      const label = document.createElement("div");
+      label.className = "avatar-pin-label";
+
+      const top = document.createElement("div");
+      top.className = "avatar-pin-name";
+      top.textContent = age != null ? `${name} • ${age}` : name;
+
+      const bottom = document.createElement("div");
+      bottom.className = "avatar-pin-city";
+      bottom.textContent = city || "—";
+
+      label.appendChild(top);
+      label.appendChild(bottom);
+
+      el.appendChild(img);
+      el.appendChild(label);
+
+      return { el, lat: current.lat, lng: current.lng, key: `${current.lat},${current.lng}` };
+    }
+
+    // Keep pins from going off the edges (accounts for avatar + label)
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    async function initMapPins() {
+      const canvas = document.getElementById("mapCanvas");
+      const pinsLayer = document.getElementById("mapPins");
+
+      const res = await fetch(`/api/tree/${FAMILY_NAME}`);
+      const data = await res.json();
+      const people = Array.isArray(data.people) ? data.people : [];
+
+      // Build pins
+      const pins = [];
+      for (const p of people) {
+        const pin = buildPin(p);
+        if (pin) pins.push(pin);
       }
+
+      // Group pins with identical coordinates so they don't stack
+      const groups = new Map();
+      for (const pin of pins) {
+        const arr = groups.get(pin.key) || [];
+        arr.push(pin);
+        groups.set(pin.key, arr);
+      }
+
+      function layout() {
+        pinsLayer.innerHTML = "";
+
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        // padding so pins stay visible
+        const padLeftRight = 120; // room for label box
+        const padTopBottom = 60;  // room for avatar
+
+        // place each group in a tiny ring
+        for (const [key, arr] of groups.entries()) {
+          const first = arr[0];
+          const base = project(first.lat, first.lng, w, h);
+
+          const n = arr.length;
+          const radius = n === 1 ? 0 : 18; // spacing between stacked people
+
+          for (let i = 0; i < n; i++) {
+            const pin = arr[i];
+            const node = pin.el;
+
+            // offset pins in a circle if multiple share same coords
+            const angle = (i / Math.max(1, n)) * Math.PI * 2;
+            const dx = Math.cos(angle) * radius;
+            const dy = Math.sin(angle) * radius;
+
+            let x = base.x + dx;
+            let y = base.y + dy;
+
+            // clamp into visible bounds
+            x = clamp(x, padLeftRight, w - padLeftRight);
+            y = clamp(y, padTopBottom, h - padTopBottom);
+
+            node.style.left = `${x}px`;
+            node.style.top = `${y}px`;
+
+            pinsLayer.appendChild(node);
+          }
+        }
+      }
+
+      layout();
+      window.addEventListener("resize", layout);
     }
 
-    layout();
-    window.addEventListener("resize", layout);
-  }
-
-  initMapPins().catch(console.error);
-</script>
+    initMapPins().catch(console.error);
+  </script>
 
 </body>
 </html>
