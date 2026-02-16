@@ -1,69 +1,194 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LineAgeMap — Map</title>
-    <link rel="stylesheet" href="/static/css/styles.css" />
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
-  </head>
-  <body>
-    <div class="appWrap">
-      <header class="topbar">
-        <div class="topbar-inner">
-          <div class="brand">
-            <div class="logo">LineAgeMap</div>
-            <div class="tag">Where your family’s story took shape</div>
-          </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LineAgeMap • Map</title>
 
-          <div class="nav-family" aria-label="Page label">
-            Migration Map
-          </div>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
 
-          <div class="topbar-right" aria-label="Brand mark">
+<body class="landing">
 
-<a class="home-btn" href="/" aria-label="Home">
-  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 11.5l9-8 9 8" />
-    <path d="M6.5 10.5V20h11V10.5" />
-  </svg>
-</a>
+  <!-- OLD HEADER (matches your screenshot header) -->
+  <header class="oldbar">
+    <div class="oldbar-inner">
 
-            <a class="topbar-link" href="/" aria-label="Back to landing">
-              <img class="nav-logo" src="/static/img/favicon.ico" alt="LineAgeMap mark" width="40" height="40" loading="eager" />
-            </a>
-          </div>
+      <a class="oldbar-brand" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
+        <div class="oldbar-brand-title">LineAgeMap</div>
+        <div class="oldbar-brand-sub">Where your family's story took shape</div>
+      </a>
+
+      <div class="oldbar-center">
+        <div class="choose-pill" aria-label="Current tree">
+          <span class="choose-pill-text">GUPTA FAMILY TREE</span>
         </div>
-      </header>
+      </div>
 
-      <main>
-        <div id="canvas" class="panel">
-          <div class="placeholder">
-            <div class="placeholder-title">Map</div>
-            <div class="placeholder-sub">A simple migration map (pins + paths over time) is next. This page is wired and ready for Leaflet.</div>
-            <div class="placeholder-actions">
-              <a class="btn-primary" href="/tree">Open Tree</a>
-              <a class="btn-ghost" href="/">Back</a>
-            </div>
-          </div>
+      <div class="oldbar-right">
+        <a class="oldbar-iconbtn" href="{{ url_for('index') }}" aria-label="Home" title="Home">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 10.5 12 3l9 7.5"></path>
+            <path d="M6.5 10.5V21h11V10.5"></path>
+          </svg>
+        </a>
+
+        <div class="oldbar-logo" aria-label="LineAgeMap logo" title="LineAgeMap">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 56V30" />
+            <path d="M32 30c-9 0-16-7-16-16S23 6 32 6s16 8 16 8-7 16-16 16Z" />
+            <circle cx="20" cy="20" r="4" />
+            <circle cx="44" cy="20" r="4" />
+            <circle cx="26" cy="36" r="4" />
+            <circle cx="38" cy="36" r="4" />
+          </svg>
         </div>
+      </div>
 
-        <section id="contact" class="footer">
-          <div class="foot-inner">
-            <div class="foot-left">
-              <div class="foot-brand">LineAgeMap</div>
-              <div class="foot-sub">Simple. Nostalgic. Shareable.</div>
-            </div>
-            <div class="foot-right">
-              <span>© <span id="year"></span></span>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <script>
-        document.getElementById("year").textContent = String(new Date().getFullYear());
-      </script>
     </div>
-  </body>
+  </header>
+
+  <!-- MAP PANEL -->
+  <main class="map-shell">
+
+    <section class="map-panel">
+      <div class="map-canvas" id="mapCanvas" aria-label="Family map">
+        <!-- world map background -->
+        <img
+          class="map-bg"
+          src="{{ url_for('static', filename='img/world-muted.png') }}"
+          alt=""
+          aria-hidden="true"
+        />
+        <div class="map-pins" id="mapPins"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER (matches your screenshot vibe) -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand">LineAgeMap</div>
+        <div class="footer-note">Simple. Nostalgic. Shareable.</div>
+        <div class="footer-copy">© 2026</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ---------------------------------------------------------
+    // CONFIG: which family file to load
+    //   your endpoint is /api/tree/<name>
+    //   so "gupta" -> data/family_gupta.json
+    // ---------------------------------------------------------
+    const FAMILY_NAME = "gupta";
+
+    // Equirectangular projection:
+    // x = (lng + 180) / 360 * width
+    // y = (90 - lat) / 180 * height
+    function project(lat, lng, width, height) {
+      const x = (lng + 180) / 360 * width;
+      const y = (90 - lat) / 180 * height;
+      return { x, y };
+    }
+
+    function calcAge(birthYear, deathYear) {
+      if (!birthYear) return null;
+      const nowYear = new Date().getFullYear();
+      const endYear = deathYear || nowYear;
+      const age = endYear - birthYear;
+      return (age >= 0 && age <= 130) ? age : null;
+    }
+
+    function safeText(v) {
+      return (v ?? "").toString();
+    }
+
+    function buildPin(person) {
+      // expected fields (add these to your family JSON):
+      // person.name
+      // person.photo (url to image)
+      // person.birthYear (number)
+      // person.deathYear (optional number)
+      // person.current = { city, lat, lng }
+      const current = person.current || null;
+      if (!current || current.lat == null || current.lng == null) return null;
+
+      const age = calcAge(person.birthYear, person.deathYear);
+      const name = safeText(person.name);
+      const city = safeText(current.city);
+
+      const el = document.createElement("div");
+      el.className = "avatar-pin";
+
+      const img = document.createElement("img");
+      img.className = "avatar-pin-img";
+      img.alt = name;
+      img.src = person.photo || "{{ url_for('static', filename='img/placeholder-avatar.png') }}";
+
+      const label = document.createElement("div");
+      label.className = "avatar-pin-label";
+
+      const top = document.createElement("div");
+      top.className = "avatar-pin-name";
+      top.textContent = age != null ? `${name} • ${age}` : name;
+
+      const bottom = document.createElement("div");
+      bottom.className = "avatar-pin-city";
+      bottom.textContent = city;
+
+      label.appendChild(top);
+      label.appendChild(bottom);
+
+      el.appendChild(img);
+      el.appendChild(label);
+
+      return { el, lat: current.lat, lng: current.lng };
+    }
+
+    async function initMapPins() {
+      const canvas = document.getElementById("mapCanvas");
+      const pinsLayer = document.getElementById("mapPins");
+
+      const res = await fetch(`/api/tree/${FAMILY_NAME}`);
+      const data = await res.json();
+
+      // You decide which people appear:
+      // show only people who have current lat/lng
+      const people = Array.isArray(data.people) ? data.people : [];
+
+      // Build pins
+      const pins = [];
+      for (const p of people) {
+        const pin = buildPin(p);
+        if (pin) pins.push(pin);
+      }
+
+      function layout() {
+        pinsLayer.innerHTML = "";
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        for (const pin of pins) {
+          const { x, y } = project(pin.lat, pin.lng, w, h);
+          const node = pin.el;
+
+          // Position: center on the avatar
+          node.style.left = `${x}px`;
+          node.style.top = `${y}px`;
+
+          pinsLayer.appendChild(node);
+        }
+      }
+
+      layout();
+      window.addEventListener("resize", layout);
+    }
+
+    initMapPins().catch(console.error);
+  </script>
+</body>
 </html>
