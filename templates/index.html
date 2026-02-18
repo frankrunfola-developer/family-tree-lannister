@@ -1,55 +1,76 @@
-<body class="paperBg">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LineAgeMap</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+  </head>
 
-  <div class="landingWrap">
-    <main class="landingMain">
+<body class="app">
 
-      <h1 class="landingHeadline">
-        Explore your family history
-      </h1>
+  <!-- Header (centered title like the mock) -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div></div>
 
-      <div class="landingTiles">
+      <a class="brand brandCenter" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
+        <div class="logo">LineAgeMap</div>
+      </a>
 
-        <a href="/tree" class="landingTile">
-          <div class="tileIcon">
-            <!-- tree icon -->
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 4v16" />
-              <circle cx="12" cy="6" r="2"/>
-              <circle cx="7" cy="10" r="2"/>
-              <circle cx="17" cy="10" r="2"/>
-              <circle cx="7" cy="16" r="2"/>
-              <circle cx="17" cy="16" r="2"/>
-            </svg>
+      <div class="topbar-right" aria-label="Actions">
+        <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 11.5l9-8 9 8" />
+            <path d="M6.5 10.5V20h11V10.5" />
+          </svg>
+        </a>
+
+        <img
+          class="nav-logo"
+          src="{{ url_for('static', filename='img/favicon.ico') }}"
+          alt="LineAgeMap mark"
+          width="40"
+          height="40"
+          loading="eager"
+        />
+      </div>
+    </div>
+  </header>
+
+  <main class="landing">
+    <section class="landingHero">
+      <div class="heroLine">
+        <span class="flourish left" aria-hidden="true"></span>
+        <h1>Explore your family history</h1>
+        <span class="flourish right" aria-hidden="true"></span>
+      </div>
+
+      <div class="tileRow" role="navigation" aria-label="Primary pages">
+        <a class="navTile" href="/tree">
+          <div class="tileIcon" aria-hidden="true">
+            <img class="tileIcon" src="{{ url_for('static', filename='img/icon-tree.svg') }}?v=2" alt="Tree">
           </div>
           <div class="tileLabel">Tree</div>
         </a>
 
-        <a href="/map" class="landingTile">
-          <div class="tileIcon">
-            <!-- map icon -->
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z"/>
-            </svg>
+        <a class="navTile" href="/map">
+          <div class="tileIcon" aria-hidden="true">
+            <img class="tileIcon" src="{{ url_for('static', filename='img/icon-map.svg') }}?v=4" alt="Map">
           </div>
           <div class="tileLabel">Map</div>
         </a>
 
-        <a href="/timeline" class="landingTile">
-          <div class="tileIcon">
-            <!-- timeline icon -->
-            <svg viewBox="0 0 24 24" fill="none">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-              <circle cx="7" cy="12" r="2"/>
-              <circle cx="12" cy="12" r="2"/>
-              <circle cx="17" cy="12" r="2"/>
-            </svg>
+        <a class="navTile" href="/timeline">
+          <div class="tileIcon" aria-hidden="true">
+            <img class="tileIcon" src="{{ url_for('static', filename='img/icon-timeline.svg') }}?v=7" alt="Timeline">
           </div>
           <div class="tileLabel">Timeline</div>
         </a>
-
       </div>
-
-    </main>
-  </div>
+    </section>
+  </main>
 
 </body>
+</html>

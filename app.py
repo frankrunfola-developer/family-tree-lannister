@@ -29,7 +29,7 @@ app = Flask(__name__)
 
 def family_path(name: str) -> Path:
     safe = "".join(c for c in name.lower() if c.isalnum() or c in ("-", "_"))
-    return DATA_DIR / f"family_{safe}.json"
+    return Path(DATA_DIR) / f"family_{safe}.json"
 
 
 def load_family_file(path: Path) -> Dict[str, Any]:
@@ -41,12 +41,6 @@ def load_family_file(path: Path) -> Dict[str, Any]:
 @app.get("/")
 def index():
     # Home page
-    return render_template("landing.html")
-
-
-# Alias route (optional). Keep if you want /index to work.
-@app.get("/index")
-def index_alias():
     return render_template("index.html")
 
 
