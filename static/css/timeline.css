@@ -1,0 +1,174 @@
+/* LineAgeMap Timeline page — sepia/paper, enterprise-simple */
+
+.tlHead{
+  margin: 6px 0 18px;
+}
+.tlHead__kicker{
+  display:inline-block;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: rgba(40,32,24,0.62);
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.45);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+.tlHead__title{
+  margin: 10px 0 14px;
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  font-weight: 800;
+  color: rgba(70,50,36,0.92);
+  letter-spacing: 0.2px;
+  font-size: clamp(22px, 3vw, 34px);
+}
+
+.tlControls{
+  display:flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tlSearch{
+  flex: 1 1 260px;
+}
+.tlSearch input{
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(40,32,24,0.16);
+  background: rgba(255,255,255,0.55);
+  padding: 12px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.tlSearch input:focus{
+  border-color: rgba(122,90,69,0.42);
+  box-shadow: 0 0 0 4px rgba(122,90,69,0.14);
+}
+
+.tlFilters{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tlChip{
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.45);
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  color: rgba(70,50,36,0.92);
+  cursor: pointer;
+}
+.tlChip:hover{
+  background: rgba(255,255,255,0.62);
+}
+.tlChip.is-active{
+  border-color: rgba(122,90,69,0.40);
+  background: rgba(255,255,255,0.70);
+  box-shadow: 0 10px 22px rgba(40,32,24,0.10);
+}
+
+/* List */
+.tlWrap{
+  margin-top: 12px;
+}
+.tlStatus{
+  color: rgba(40,32,24,0.72);
+  font-size: 14px;
+  margin: 12px 0;
+}
+
+.tlList{
+  display: grid;
+  gap: 12px;
+}
+
+/* Year group */
+.tlYear{
+  margin-top: 6px;
+}
+.tlYear__head{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+.tlYear__label{
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  font-weight: 900;
+  color: rgba(70,50,36,0.92);
+  font-size: 18px;
+}
+.tlYear__rule{
+  height: 1px;
+  background: rgba(40,32,24,0.14);
+  flex: 1;
+}
+
+/* Event card */
+.tlItem{
+  position: relative;
+  border: 1px solid rgba(40,32,24,0.14);
+  background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52));
+  border-radius: 16px;
+  box-shadow: 0 14px 30px rgba(40,32,24,0.10);
+  padding: 12px 12px 12px 14px;
+  display:grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  overflow:hidden;
+}
+
+.tlIcon{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.55);
+  display:grid;
+  place-items:center;
+  font-weight: 900;
+  color: rgba(122,90,69,0.95);
+}
+
+.tlMain{
+  min-width: 0;
+}
+.tlTitle{
+  margin: 0;
+  font-weight: 900;
+  color: rgba(70,50,36,0.92);
+  letter-spacing: 0.15px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.tlMeta{
+  margin-top: 5px;
+  color: rgba(40,32,24,0.70);
+  font-size: 13px;
+  line-height: 1.25;
+}
+.tlTag{
+  display:inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  color: rgba(40,32,24,0.60);
+  border: 1px solid rgba(40,32,24,0.12);
+  background: rgba(255,255,255,0.45);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+@media (max-width: 640px){
+  .tlItem{
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+  .tlIcon{ width: 40px; height: 40px; border-radius: 13px; }
+}

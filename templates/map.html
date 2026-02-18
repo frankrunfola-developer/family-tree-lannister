@@ -5,20 +5,59 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LineAgeMap</title>
     <link rel="stylesheet" href="/static/css/styles.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav-pro.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/map-accordion.css') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
   </head>
 
 <body class="app">
-  {% include "_topbar.html" %}
 
-  <main class="mapPage">
-    <div class="mapTitlePill">MAP</div>
-    <section class="accordion" id="mapAccordion" aria-label="Country, state, city map accordion">
-      <!-- populated by /static/js/map-accordion.js -->
+    <!-- Header -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <nav class="topbar-links" aria-label="Primary">
+        <a href="{{ url_for('tree_view') }}">Tree</a>
+        <a class="is-active" href="{{ url_for('map_view') }}">Map</a>
+        <a href="{{ url_for('timeline_view') }}">Timeline</a>
+      </nav>
+
+      <a class="brand brandCenter" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
+        <img class="brandMark" src="{{ url_for('static', filename='img/favicon.ico') }}" alt="" aria-hidden="true" />
+        <div class="logo">LineAgeMap</div>
+      </a>
+
+      <div class="topbar-right" aria-label="Actions">
+        <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 11.5l9-8 9 8" />
+            <path d="M6.5 10.5V20h11V10.5" />
+          </svg>
+        </a>
+
+        <button class="menu-btn" id="navbtn" type="button" aria-expanded="false" aria-controls="navpanel">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span class="sr-only">Menu</span>
+        </button>
+
+        <div class="menu-panel" id="navpanel" role="navigation" aria-label="Mobile menu">
+          <a href="{{ url_for('tree_view') }}">Tree</a>
+          <a href="{{ url_for('map_view') }}">Map</a>
+          <a href="{{ url_for('timeline_view') }}">Timeline</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+
+    <!-- Map -->
+  <main>
+    <div class="nav-family" style="margin: 14px auto 18px;">MAP</div>
+
+    <section class="map-shell" aria-label="Family map">
+      <div id="mapAccRoot" class="mapAccRoot">
+        <div class="mapLoading">Loading map…</div>
+      </div>
     </section>
 
+    <!-- Footer -->
     <section class="footer">
       <div class="foot-inner">
         <div class="foot-left">
@@ -32,10 +71,12 @@
     </section>
   </main>
 
-  <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/map-accordion.js') }}"></script>
+  <link rel="stylesheet" href="/static/css/map-accordion.css" />
+  <script src="/static/js/nav.js"></script>
+  <script src="/static/js/map-accordion.js"></script>
   <script>
     document.getElementById("year").textContent = String(new Date().getFullYear());
   </script>
+
 </body>
 </html>

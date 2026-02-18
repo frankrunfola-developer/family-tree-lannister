@@ -3,38 +3,109 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LineAgeMap</title>
-    <link rel="stylesheet" href="/static/css/styles.css" />
+    <title>LineAgeMap — Timeline</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav-pro.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/timeline.css') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
   </head>
 
-<body class="app">
-  {% include "_topbar.html" %}
+  <body class="app">
 
-  <main style="max-width:1120px;margin:0 auto;padding:18px 16px 64px;">
-    <div class="mapTitlePill" style="letter-spacing:.06em;">TIMELINE</div>
+    <!-- Navbar (matches your nav-pro.css) -->
+    <header class="topbar">
+      <div class="topbar-pro">
+        <nav class="topnav" aria-label="Primary">
+          <a class="topnav-link" href="{{ url_for('tree_view') }}">Tree</a>
+          <a class="topnav-link" href="{{ url_for('map_view') }}">Map</a>
+          <a class="topnav-link" href="{{ url_for('timeline_view') }}">Timeline</a>
+        </nav>
 
-    <div style="opacity:.7;font-weight:700;padding:14px 4px;">
-      Timeline view coming next — keeping this page clean while the Map gets upgraded.
-    </div>
+        <a class="brandCenter" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
+          <span class="brandMark">
+            <img src="{{ url_for('static', filename='img/favicon.ico') }}" alt>
+          </span>
+          <div class="logo">LineAgeMap</div>
+        </a>
 
-    <section class="footer">
-      <div class="foot-inner">
-        <div class="foot-left">
-          <div class="foot-brand">LineAgeMap</div>
-          <div class="foot-sub">Simple. Nostalgic. Shareable.</div>
-        </div>
-        <div class="foot-right">
-          <span>© <span id="year"></span></span>
+        <div class="topbar-right">
+          <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 11.5l9-8 9 8" />
+              <path d="M6.5 10.5V20h11V10.5" />
+            </svg>
+          </a>
+
+          <!-- replaces the old "Open" button -->
+          <button class="navbtn" id="navBtn" type="button" aria-expanded="false" aria-controls="topnavPanel">
+            <span class="navbtn-bars" aria-hidden="true"></span>
+          </button>
         </div>
       </div>
-    </section>
-  </main>
 
-  <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
-  <script>
-    document.getElementById("year").textContent = String(new Date().getFullYear());
+      <div class="topnav-panel" id="topnavPanel" hidden>
+        <a href="{{ url_for('tree_view') }}">Tree</a>
+        <a href="{{ url_for('map_view') }}">Map</a>
+        <a href="{{ url_for('timeline_view') }}">Timeline</a>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="pillTitle">TIMELINE</div>
+
+      <header class="tlHead">
+        <h1 class="tlHead__title">Your family story over time</h1>
+
+        <div class="tlControls">
+          <div class="tlSearch">
+            <input id="tlSearch" type="search" placeholder="Search names, places, events…" autocomplete="off" />
+          </div>
+
+          <div class="tlFilters">
+            <button class="tlChip is-active" data-type="all" type="button">All</button>
+            <button class="tlChip" data-type="birth" type="button">Births</button>
+            <button class="tlChip" data-type="death" type="button">Deaths</button>
+            <button class="tlChip" data-type="marriage" type="button">Marriages</button>
+            <button class="tlChip" data-type="move" type="button">Moves</button>
+            <button class="tlChip" data-type="other" type="button">Other</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="tlWrap">
+        <div id="tlStatus" class="tlStatus">Loading timeline…</div>
+        <div id="tlList" class="tlList" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script>
+    // match your active family id
+    window.TIMELINE_FAMILY_ID = window.TIMELINE_FAMILY_ID || "gupta";
+
+    // mobile menu toggle (matches your nav CSS)
+    (function(){
+      const btn = document.getElementById("navBtn");
+      const panel = document.getElementById("topnavPanel");
+      if(!btn || !panel) return;
+
+      btn.addEventListener("click", () => {
+        const open = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", String(!open));
+        panel.hidden = open;
+        panel.classList.toggle("topnav-panel--open", !open);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (panel.hidden) return;
+        if (panel.contains(e.target) || btn.contains(e.target)) return;
+        btn.setAttribute("aria-expanded","false");
+        panel.hidden = true;
+        panel.classList.remove("topnav-panel--open");
+      });
+    })();
   </script>
-</body>
+
+    <script src="{{ url_for('static', filename='js/timeline.js') }}"></script>
+  </body>
 </html>

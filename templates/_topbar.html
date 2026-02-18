@@ -1,28 +1,40 @@
-<header class="probar" role="banner">
-  <div class="probar__inner">
-    <a class="probar__brand" href="{{ url_for('index') }}" aria-label="LineAgeMap home">
-      <span class="probar__mark" aria-hidden="true">
-        <svg viewBox="0 0 48 48" fill="none">
-          <path d="M24 6c-6.6 0-12 5.4-12 12 0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M24 18c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z" stroke="currentColor" stroke-width="2"/>
-        </svg>
+<header class="topbar" role="banner">
+  <div class="topbar-inner topbar-pro">
+    <!-- Left: primary nav -->
+    <nav class="topnav" aria-label="Primary">
+      <a class="topnav-link" href="{{ url_for('tree_view') }}">Tree</a>
+      <a class="topnav-link" href="{{ url_for('map_view') }}">Map</a>
+      <a class="topnav-link" href="{{ url_for('timeline_view') }}">Timeline</a>
+    </nav>
+
+    <!-- Center: brand -->
+    <a class="brand brandCenter" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
+      <span class="brandMark" aria-hidden="true">
+        <img src="{{ url_for('static', filename='img/favicon.ico') }}" alt="" />
       </span>
-      <span class="probar__wordmark">
-        <span class="probar__name">LineAgeMap</span>
-        <span class="probar__tag">Explore your family history</span>
-      </span>
+      <span class="logo">LineAgeMap</span>
     </a>
 
-    <button class="probar__toggle" id="navbtn" type="button" aria-expanded="false" aria-controls="navpanel">
-      <span class="probar__hamburger" aria-hidden="true"></span>
-      <span class="sr-only">Menu</span>
-    </button>
+    <!-- Right: actions -->
+    <div class="topbar-right" aria-label="Actions">
+      <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 11.5l9-8 9 8" />
+          <path d="M6.5 10.5V20h11V10.5" />
+        </svg>
+      </a>
 
-    <nav class="probar__nav" id="navpanel" aria-label="Primary">
-      <a class="probar__link" href="{{ url_for('tree_view') }}">Tree</a>
-      <a class="probar__link" href="{{ url_for('map_view') }}">Map</a>
-      <a class="probar__link" href="{{ url_for('timeline_view') }}">Timeline</a>
-      <a class="probar__cta" href="{{ url_for('map_view') }}">Open</a>
-    </nav>
+      <button class="navbtn" id="navbtn" type="button" aria-expanded="false" aria-controls="navpanel">
+        <span class="navbtn-bars" aria-hidden="true"></span>
+        <span class="sr-only">Menu</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile panel -->
+  <div class="topnav-panel" id="navpanel" role="navigation" aria-label="Mobile">
+    <a class="topnav-link" href="{{ url_for('tree_view') }}">Tree</a>
+    <a class="topnav-link" href="{{ url_for('map_view') }}">Map</a>
+    <a class="topnav-link" href="{{ url_for('timeline_view') }}">Timeline</a>
   </div>
 </header>

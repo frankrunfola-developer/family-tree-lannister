@@ -1,26 +1,27 @@
-(() => {
-  const btn = document.getElementById('navbtn');
-  const panel = document.getElementById('navpanel');
+(function () {
+  var btn = document.getElementById('navbtn');
+  var panel = document.getElementById('navpanel');
   if (!btn || !panel) return;
 
-  const close = () => {
+  function closeMenu() {
     btn.setAttribute('aria-expanded', 'false');
-    panel.classList.remove('probar__nav--open');
-  };
+    panel.classList.remove('open');
+  }
 
-  btn.addEventListener('click', () => {
-    const open = btn.getAttribute('aria-expanded') === 'true';
-    btn.setAttribute('aria-expanded', String(!open));
-    panel.classList.toggle('probar__nav--open', !open);
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    panel.classList.toggle('open', !open);
   });
 
-  document.addEventListener('click', (e) => {
-    if (!panel.classList.contains('probar__nav--open')) return;
+  document.addEventListener('click', function (e) {
+    if (!panel.classList.contains('open')) return;
     if (panel.contains(e.target) || btn.contains(e.target)) return;
-    close();
+    closeMenu();
   });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') close();
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMenu();
   });
 })();

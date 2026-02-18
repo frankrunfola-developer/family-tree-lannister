@@ -1,311 +1,307 @@
-/*
-  Country → State/Province → City accordion (mobile-first).
-  - Uses your existing world-muted.png as the single map texture.
-  - "Zoom" is done via background-size + background-position.
-  - Adjust BBOX entries to taste (fast to tune by eye).
+/* Map accordion: Country -> State/Province -> City
+   Renders face-only pins and shows an info bubble on hover/tap.
+   Data source: /api/tree/<family>
 */
-(async () => {
-  const FAMILY_NAME = "gupta";
-  const MAP_IMG = `url('/static/img/world-muted.png')`;
+(function () {
+  var FAMILY_NAME = 'gupta';
 
-  // Background "zoom presets" (percentages). Tweak these.
-  // size = background-size (bigger => more zoom). pos = background-position.
-  const BBOX = {
-    // Countries
-    "Canada": { size: "220%", pos: "28% 28%" },
-    "India": { size: "260%", pos: "63% 46%" },
-    "United States": { size: "210%", pos: "23% 46%" },
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
-    // Provinces / States (examples)
-    "Ontario": { size: "520%", pos: "33% 34%" },
-    "New York": { size: "620%", pos: "28% 40%" },
-    "California": { size: "420%", pos: "14% 54%" },
-    "West Bengal": { size: "720%", pos: "67% 44%" },
-    "Maharashtra": { size: "650%", pos: "60% 52%" },
+  function proj(lat, lng) {
+    // equirectangular projection to percent
+    var x = (lng + 180) / 360 * 100;
+    var y = (90 - lat) / 180 * 100;
+    return { x: x, y: y };
+  }
+
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+  // Zoom levels (increase for more spacing)
+  var ZOOM = { country: 360, state: 600, city: 900 };
+
+  // Background "camera" centers (percent)
+  var CENTER = {
+    'Canada': { x: 40, y: 36 },
+    'United States': { x: 32, y: 48 },
+    'India': { x: 64, y: 52 },
+
+    'Ontario': { x: 52, y: 34 },
+    'New York': { x: 44, y: 40 },
+    'California': { x: 18, y: 54 },
+    'West Bengal': { x: 66, y: 47 },
+    'Maharashtra': { x: 58, y: 57 }
   };
 
-  const FLAGS = { "Canada":"🇨🇦", "India":"🇮🇳", "United States":"🇺🇸" };
-
-  const $ = (sel, el=document) => el.querySelector(sel);
-
-  function parseYear(val){
-    if (val == null) return null;
-    const n = parseInt(String(val).trim(), 10);
-    return Number.isFinite(n) ? n : null;
-  }
-  function calcAge(bornStr, diedStr){
-    const born = parseYear(bornStr);
-    if (!born) return null;
-    const died = parseYear(diedStr);
-    const end = died || new Date().getFullYear();
-    const age = end - born;
-    return (age >= 0 && age <= 130) ? age : null;
-  }
-  function safe(v){ return (v ?? "").toString(); }
-
-  // projection relative to world map image (equirectangular)
-  function project(lat, lng, width, height){
-    return { x: (lng + 180) / 360 * width, y: (90 - lat) / 180 * height };
+  function mapView(el, label, zoomPct) {
+    var c = CENTER[label] || { x: 50, y: 50 };
+    el.style.backgroundSize = String(zoomPct) + '% auto';
+    el.style.backgroundPosition = String(clamp(c.x, 0, 100)) + '% ' + String(clamp(c.y, 0, 100)) + '%';
   }
 
-  function groupBy(arr, keyFn){
-    const m = new Map();
-    for (const item of arr){
-      const k = keyFn(item) || "—";
-      const a = m.get(k) || [];
-      a.push(item);
-      m.set(k, a);
+  function groupPeople(people) {
+    var countries = {};
+    for (var i = 0; i < people.length; i++) {
+      var p = people[i];
+      var loc = p.location || {};
+      if (!loc.country || loc.lat == null || loc.lng == null) continue;
+
+      var country = loc.country;
+      var region = loc.region || 'Unknown';
+      var city = loc.city || 'Unknown';
+
+      if (!countries[country]) countries[country] = { label: country, states: {} };
+      if (!countries[country].states[region]) countries[country].states[region] = { label: region, cities: {} };
+      if (!countries[country].states[region].cities[city]) countries[country].states[region].cities[city] = { label: city, people: [] };
+
+      countries[country].states[region].cities[city].people.push(p);
     }
-    return m;
+    return countries;
   }
 
-  function buildChevron(){
-    const s = document.createElement("span");
-    s.className = "accChevron";
-    s.innerHTML = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-    return s;
+  function createTip(mapEl) {
+    var tip = document.createElement('div');
+    tip.className = 'pinTip';
+    tip.innerHTML = '<div class="pinTip__inner"><div class="pinTip__name"></div><div class="pinTip__meta"></div></div>';
+    mapEl.appendChild(tip);
+    return tip;
   }
 
-  function makeAccItem({title, flag, count, open=false}){
-    const item = document.createElement("div");
-    item.className = "accItem";
-    item.dataset.open = open ? "true" : "false";
+  function showTip(mapEl, tip, pin, data) {
+    tip.querySelector('.pinTip__name').textContent = data.name || '';
+    var bits = [];
+    if (data.age) bits.push('Age ' + data.age);
+    var loc = [data.city, data.region, data.country].filter(Boolean).join(', ');
+    if (loc) bits.push(loc);
+    tip.querySelector('.pinTip__meta').textContent = bits.join(' • ');
 
-    const head = document.createElement("div");
-    head.className = "accHead";
-    head.innerHTML = `
-      <div class="accLeft">
-        <span class="accFlag">${flag || ""}</span>
-        <div class="accTitle">${title}</div>
-        <div class="accMeta">(${count})</div>
-      </div>
-    `;
-    const chev = buildChevron();
-    head.appendChild(chev);
+    // Position in map coordinates
+    var rect = mapEl.getBoundingClientRect();
+    var pr = pin.getBoundingClientRect();
+    var cx = (pr.left - rect.left) + pr.width / 2;
+    var top = (pr.top - rect.top);
 
-    const body = document.createElement("div");
-    body.className = "accBody";
+    tip.style.left = String(cx) + 'px';
+    tip.style.top = String(top) + 'px';
+    tip.classList.add('open');
 
-    head.addEventListener("click", () => {
-      item.dataset.open = (item.dataset.open === "true") ? "false" : "true";
+    var inner = tip.querySelector('.pinTip__inner');
+    requestAnimationFrame(function () {
+      var w = inner.offsetWidth;
+      var h = inner.offsetHeight;
+      var left = clamp(cx - w / 2, 10, mapEl.clientWidth - w - 10);
+      var y = clamp(top - h - 10, 10, mapEl.clientHeight - h - 10);
+      inner.style.transform = 'translate(' + String(left - cx) + 'px,' + String(y - top) + 'px)';
     });
-
-    item.appendChild(head);
-    item.appendChild(body);
-    return { item, body };
   }
 
-  function makeMapCanvas(presetKey){
-    const wrap = document.createElement("div");
-    wrap.className = "mapCard";
-    const canvas = document.createElement("div");
-    canvas.className = "mapCanvas";
-    canvas.style.setProperty("--map-img", MAP_IMG);
-    const p = BBOX[presetKey] || null;
-    canvas.style.setProperty("--map-size", p?.size || "180%");
-    canvas.style.setProperty("--map-pos", p?.pos || "50% 50%");
-    const pins = document.createElement("div");
-    pins.className = "pinLayer";
-    canvas.appendChild(pins);
-    wrap.appendChild(canvas);
-    return { wrap, canvas, pins };
+  function hideTip(tip) {
+    if (!tip) return;
+    tip.classList.remove('open');
+    var inner = tip.querySelector('.pinTip__inner');
+    if (inner) inner.style.transform = 'translate(0,0)';
   }
 
-  function placePins(canvasEl, pinsLayer, people){
-    pinsLayer.innerHTML = "";
-    const rect = canvasEl.getBoundingClientRect();
-    const w = rect.width;
-    const h = rect.height;
+  function pinEl(person, country, region, city) {
+    var loc = person.location;
+    var xy = proj(loc.lat, loc.lng);
 
-    // group by identical coords to show stack count
-    const groups = groupBy(people, p => `${p.loc.lat},${p.loc.lng}`);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pin';
+    btn.style.left = String(xy.x) + '%';
+    btn.style.top = String(xy.y) + '%';
+    btn.setAttribute('aria-label', person.name);
 
-    for (const [key, arr] of groups.entries()){
-      const base = project(arr[0].loc.lat, arr[0].loc.lng, w, h);
-      const n = arr.length;
-      // slight spiral offset so faces don't perfectly overlap
-      for (let i=0;i<n;i++){
-        const p = arr[i];
-        const angle = (i / Math.max(1,n)) * Math.PI * 2;
-        const r = n === 1 ? 0 : Math.min(18, 8 + i*3);
-        const x = base.x + Math.cos(angle)*r;
-        const y = base.y + Math.sin(angle)*r;
+    var img = document.createElement('img');
+    img.src = person.photo || '/static/img/placeholder-avatar.png';
+    img.alt = '';
+    btn.appendChild(img);
 
-        const pin = document.createElement("div");
-        pin.className = "facePin";
-        if (n > 1 && i === 0) pin.setAttribute("data-count", String(n));
-        pin.style.left = `${x}px`;
-        pin.style.top = `${y}px`;
+    btn._meta = {
+      name: person.name,
+      age: guessAge(person),
+      city: city,
+      region: region,
+      country: country
+    };
+    return btn;
+  }
 
-        const img = document.createElement("img");
-        img.src = p.photo || "/static/img/placeholder-avatar.png";
-        img.alt = p.name;
+  function guessAge(person) {
+    // If born is a year, compute rough age; otherwise blank.
+    var born = person.born;
+    if (!born) return '';
+    var m = String(born).match(/(\d{4})/);
+    if (!m) return '';
+    var y = parseInt(m[1], 10);
+    var now = new Date().getFullYear();
+    var age = now - y;
+    if (age < 0 || age > 120) return '';
+    return String(age);
+  }
 
-        const dot = document.createElement("span");
-        dot.className = "faceDot";
+  function buildMapCard(label, zoomLevel) {
+    var map = document.createElement('div');
+    map.className = 'accMap';
+    map.style.backgroundImage = 'url(/static/img/world-muted.png)';
+    mapView(map, label, zoomLevel);
+    return map;
+  }
 
-        const card = document.createElement("div");
-        card.className = "infoCard";
-        const age = calcAge(p.born, p.died);
-        const place = [p.loc.city, p.loc.region].filter(Boolean).join(", ");
-        const line2 = (age != null) ? `Age ${age} • ${place}` : place;
-        card.innerHTML = `<div class="infoName">${p.name}</div>
-                          <div class="infoSub">${line2}</div>`;
+  function buildAccordion(root, countries) {
+    root.innerHTML = '';
+    var countryNames = Object.keys(countries).sort();
+    for (var i = 0; i < countryNames.length; i++) {
+      var cName = countryNames[i];
+      var c = countries[cName];
+      var cWrap = document.createElement('details');
+      cWrap.className = 'acc';
+      cWrap.open = true;
 
-        pin.appendChild(img);
-        pin.appendChild(dot);
-        pin.appendChild(card);
+      var cSum = document.createElement('summary');
+      cSum.className = 'accHead';
+      cSum.innerHTML = '<span class="accTitle">' + escapeHtml(cName) + '</span>';
+      cWrap.appendChild(cSum);
 
-        // mobile tap => show one floating card (simple)
-        pin.addEventListener("click", (e) => {
-          if (window.matchMedia("(hover: hover)").matches) return;
-          // remove any existing card
-          const existing = pinsLayer.querySelector(".infoCard--mobile");
-          if (existing) existing.remove();
+      var cBody = document.createElement('div');
+      cBody.className = 'accBody';
 
-          const mobile = document.createElement("div");
-          mobile.className = "infoCard infoCard--mobile";
-          mobile.style.opacity = "1";
-          mobile.style.pointerEvents = "auto";
-          mobile.style.transform = "translate(-10%, -118%)";
-          mobile.innerHTML = card.innerHTML;
+      var cMap = buildMapCard(cName, ZOOM.country);
+      var cTip = createTip(cMap);
 
-          const closeBtn = document.createElement("div");
-          closeBtn.style.cssText = "margin-top:6px;font-weight:900;font-size:12px;color:#7a5a45;cursor:pointer;";
-          closeBtn.textContent = "Close";
-          closeBtn.addEventListener("click", () => mobile.remove());
-          mobile.appendChild(closeBtn);
+      // add pins for whole country (all people)
+      var states = c.states;
+      var stateNames = Object.keys(states).sort();
+      for (var s = 0; s < stateNames.length; s++) {
+        var sName = stateNames[s];
+        var st = states[sName];
+        var cityNames = Object.keys(st.cities).sort();
+        for (var ci = 0; ci < cityNames.length; ci++) {
+          var city = st.cities[cityNames[ci]];
+          for (var p = 0; p < city.people.length; p++) {
+            var pe = city.people[p];
+            var pin = pinEl(pe, cName, sName, city.label);
+            cMap.appendChild(pin);
 
-          pin.appendChild(mobile);
-          e.stopPropagation();
-        });
-
-        pinsLayer.appendChild(pin);
+            (function (pinRef, meta) {
+              pinRef.addEventListener('mouseenter', function () { showTip(cMap, cTip, pinRef, meta); });
+              pinRef.addEventListener('mouseleave', function () { hideTip(cTip); });
+              pinRef.addEventListener('focus', function () { showTip(cMap, cTip, pinRef, meta); });
+              pinRef.addEventListener('blur', function () { hideTip(cTip); });
+              pinRef.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var open = cTip.classList.contains('open') && cTip._openFor === pinRef;
+                if (open) { hideTip(cTip); cTip._openFor = null; }
+                else { cTip._openFor = pinRef; showTip(cMap, cTip, pinRef, meta); }
+              });
+            })(pin, pin._meta);
+          }
+        }
       }
-    }
-  }
 
-  async function load(){
-    const res = await fetch(`/api/tree/${FAMILY_NAME}`);
-    const data = await res.json();
-    const peopleRaw = Array.isArray(data.people) ? data.people : [];
-    // alive with location
-    const people = peopleRaw
-      .filter(p => !p.died)
-      .map(p => {
-        const loc = p.location || p.current || {};
-        return {
-          name: safe(p.name),
-          born: p.born,
-          died: p.died,
-          photo: p.photo,
-          loc: {
-            country: safe(loc.country),
-            region: safe(loc.region),
-            city: safe(loc.city),
-            lat: loc.lat,
-            lng: loc.lng
+      cMap.addEventListener('click', function () { hideTip(cTip); });
+
+      cBody.appendChild(cMap);
+
+      // states accordion
+      for (var si = 0; si < stateNames.length; si++) {
+        var sn = stateNames[si];
+        var st2 = states[sn];
+
+        var sDetails = document.createElement('details');
+        sDetails.className = 'acc sub';
+        sDetails.open = false;
+
+        var sSum = document.createElement('summary');
+        sSum.className = 'accHead';
+        sSum.innerHTML = '<span class="accTitle">' + escapeHtml(sn) + '</span>';
+        sDetails.appendChild(sSum);
+
+        var sBody = document.createElement('div');
+        sBody.className = 'accBody';
+
+        var sMap = buildMapCard(sn, ZOOM.state);
+        var sTip = createTip(sMap);
+
+        var cityN2 = Object.keys(st2.cities).sort();
+        for (var cj = 0; cj < cityN2.length; cj++) {
+          var ct = st2.cities[cityN2[cj]];
+          for (var pp = 0; pp < ct.people.length; pp++) {
+            var pe2 = ct.people[pp];
+            var pin2 = pinEl(pe2, cName, sn, ct.label);
+            sMap.appendChild(pin2);
+
+            (function (pinRef2, meta2) {
+              pinRef2.addEventListener('mouseenter', function () { showTip(sMap, sTip, pinRef2, meta2); });
+              pinRef2.addEventListener('mouseleave', function () { hideTip(sTip); });
+              pinRef2.addEventListener('focus', function () { showTip(sMap, sTip, pinRef2, meta2); });
+              pinRef2.addEventListener('blur', function () { hideTip(sTip); });
+              pinRef2.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var open2 = sTip.classList.contains('open') && sTip._openFor === pinRef2;
+                if (open2) { hideTip(sTip); sTip._openFor = null; }
+                else { sTip._openFor = pinRef2; showTip(sMap, sTip, pinRef2, meta2); }
+              });
+            })(pin2, pin2._meta);
           }
-        };
-      })
-      .filter(p => p.loc.lat != null && p.loc.lng != null && p.loc.country);
-
-    return people;
-  }
-
-  const root = document.getElementById("mapAccordion");
-  if (!root) return;
-
-  const people = await load();
-
-  const byCountry = groupBy(people, p => p.loc.country);
-  const countries = Array.from(byCountry.keys()).sort((a,b)=>a.localeCompare(b));
-
-  root.innerHTML = "";
-
-  // render countries
-  for (const c of countries){
-    const arrC = byCountry.get(c) || [];
-    const { item, body } = makeAccItem({ title: c, flag: FLAGS[c] || "🌍", count: arrC.length, open: false });
-
-    const { wrap, canvas, pins } = makeMapCanvas(c);
-    body.appendChild(wrap);
-
-    // states within country
-    const byState = groupBy(arrC, p => p.loc.region || "—");
-    const states = Array.from(byState.keys()).filter(k=>k!=="—").sort((a,b)=>a.localeCompare(b));
-    if (states.length){
-      const sub = document.createElement("div");
-      sub.className = "subAcc";
-      body.appendChild(sub);
-
-      for (const s of states){
-        const arrS = byState.get(s) || [];
-        const { item: sItem, body: sBody } = makeAccItem({ title: s, flag: "📍", count: arrS.length, open: false });
-        sItem.classList.add("subItem");
-
-        const { wrap: sWrap, canvas: sCanvas, pins: sPins } = makeMapCanvas(s);
-        sBody.appendChild(sWrap);
-
-        // cities row
-        const byCity = groupBy(arrS, p => p.loc.city || "—");
-        const cities = Array.from(byCity.keys()).filter(k=>k!=="—").sort((a,b)=>a.localeCompare(b));
-        if (cities.length){
-          const row = document.createElement("div");
-          row.className = "cityRow";
-          for (const city of cities){
-            const count = (byCity.get(city) || []).length;
-            const pill = document.createElement("button");
-            pill.type = "button";
-            pill.className = "cityPill";
-            pill.textContent = `${city} (${count})`;
-            pill.addEventListener("click", () => {
-              // city zoom: we approximate by nudging map position toward first person in that city
-              const peopleCity = byCity.get(city) || [];
-              if (!peopleCity.length) return;
-              const p0 = peopleCity[0];
-              // translate lat/lng to world percent for background-position
-              const xPct = ((p0.loc.lng + 180) / 360) * 100;
-              const yPct = ((90 - p0.loc.lat) / 180) * 100;
-              sCanvas.style.setProperty("--map-size", "950%");
-              sCanvas.style.setProperty("--map-pos", `${xPct}% ${yPct}%`);
-              placePins(sCanvas, sPins, arrS);
-            });
-            row.appendChild(pill);
-          }
-          sBody.appendChild(row);
         }
 
-        sub.appendChild(sItem);
+        sMap.addEventListener('click', function () { hideTip(sTip); });
+        sBody.appendChild(sMap);
 
-        // deferred pin layout on open/resize
-        const layout = () => {
-          placePins(sCanvas, sPins, arrS);
-        };
-        // place when opened
-        sItem.querySelector(".accHead").addEventListener("click", () => {
-          setTimeout(layout, 50);
-        });
-        window.addEventListener("resize", () => {
-          if (sItem.dataset.open === "true") layout();
-        });
+        // city pills (just for quick sense, not filtering yet)
+        var pills = document.createElement('div');
+        pills.className = 'cityRow';
+        for (var ck = 0; ck < cityN2.length; ck++) {
+          var cname = cityN2[ck];
+          var count = st2.cities[cname].people.length;
+          var pill = document.createElement('span');
+          pill.className = 'cityPill';
+          pill.textContent = cname + ' (' + String(count) + ')';
+          pills.appendChild(pill);
+        }
+        sBody.appendChild(pills);
 
-        // initial for states closed: none
+        sDetails.appendChild(sBody);
+        cBody.appendChild(sDetails);
+
+        // re-apply view when toggled (keeps framing)
+        (function (mapEl, lab, z) {
+          sDetails.addEventListener('toggle', function () { mapView(mapEl, lab, z); });
+        })(sMap, sn, ZOOM.state);
       }
+
+      cWrap.appendChild(cBody);
+      root.appendChild(cWrap);
+
+      (function (mapEl, lab, z) {
+        cWrap.addEventListener('toggle', function () { mapView(mapEl, lab, z); });
+      })(cMap, cName, ZOOM.country);
     }
-
-    root.appendChild(item);
-
-    const layoutCountry = () => placePins(canvas, pins, arrC);
-    item.querySelector(".accHead").addEventListener("click", () => setTimeout(layoutCountry, 50));
-    window.addEventListener("resize", () => { if (item.dataset.open === "true") layoutCountry(); });
   }
 
-  // Close mobile pop card on background tap
-  document.addEventListener("click", () => {
-    const m = document.querySelector(".infoCard--mobile");
-    if (m) m.remove();
-  });
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] || c;
+    });
+  }
+
+  function boot() {
+    var root = document.getElementById('mapAccRoot');
+    if (!root) return;
+
+    fetch('/api/tree/' + encodeURIComponent(FAMILY_NAME))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var people = (data && data.people) ? data.people : [];
+        var grouped = groupPeople(people);
+        buildAccordion(root, grouped);
+      })
+      .catch(function (err) {
+        root.innerHTML = '<div class="mapLoading">Could not load map data.</div>';
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
 })();
