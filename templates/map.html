@@ -1,85 +1,47 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LineAgeMap</title>
-    <link rel="stylesheet" href="/static/css/styles.css" />
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
-  </head>
+{% extends "base.html" %}
+{% set active_page = "map" %}
 
-<body class="app">
+{% block title %}LineAgeMap — Map{% endblock %}
 
-    <!-- Header -->
-  <header class="topbar">
-      <div class="topbar-inner">
-        <div class="topbar-left">
-          <a class="brandIcon" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
-            <img class="brandMark" src="{{ url_for('static', filename='img/favicon.ico') }}" alt="" aria-hidden="true" />
-          </a>
-          <nav class="topbar-links" aria-label="Primary">
-            <a href="{{ url_for('tree_view') }}">Tree</a>
-            <a class="is-active" href="{{ url_for('map_view') }}">Map</a>
-            <a href="{{ url_for('timeline_view') }}">Timeline</a>
-          </nav>
-        </div>
+{% block content %}
+  <div class="appFrameShell">
+    <div class="appFrameCard">
+  <div class="nav-family" style="margin: 16px auto 6px; max-width: 1100px;">
+    {% if public_slug %}
+      <div class="pillTitle">PUBLIC FAMILY MAP</div>
+    {% elif sample_id %}
+      <div class="pillTitle">SAMPLE MAP</div>
+    {% else %}
+      <div class="pillTitle">MY FAMILY MAP</div>
+    {% endif %}
+  </div>
 
-        <a class="brandTitle" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">LineAgeMap</a>
-
-        <div class="topbar-right" aria-label="Actions">
-          <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 11.5l9-8 9 8" />
-              <path d="M6.5 10.5V20h11V10.5" />
-            </svg>
-          </a>
-
-          <button class="menu-btn" id="navbtn" type="button" aria-expanded="false" aria-controls="navpanel" aria-label="Menu">
-            <span class="menu-icon" aria-hidden="true"></span>
-            <span class="sr-only">Menu</span>
-          </button>
-
-          <div class="menu-panel" id="navpanel" role="navigation" aria-label="Mobile menu">
-            <a href="{{ url_for('tree_view') }}">Tree</a>
-            <a href="{{ url_for('map_view') }}">Map</a>
-            <a href="{{ url_for('timeline_view') }}">Timeline</a>
-            <a href="{{ url_for('index') }}">Home</a>
-          </div>
-        </div>
+  <section class="mapShell" aria-label="Family Map" style="max-width: 1100px; margin: 0 auto 22px;">
+    <div id="mapRoot" class="mapRoot">
+      <div class="mapLegend">
+        <div class="mapLegendTitle">Locations</div>
+        <div class="mapLegendSub">Tap a country to zoom into regions and cities.</div>
       </div>
-    </header>
 
+      <div id="mapAccordion" class="mapAccordion" aria-live="polite"></div>
+    </div>
+  </section>
+    </div>
+  </div>
+{% endblock %}
 
-    <!-- Map -->
-  <main>
-    <div class="nav-family" style="margin: 14px auto 18px;">MAP</div>
-
-    <section class="map-shell" aria-label="Family map">
-      <div id="mapAccRoot" class="mapAccRoot">
-        <div class="mapLoading">Loading map…</div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <section class="footer">
-      <div class="foot-inner">
-        <div class="foot-left">
-          <div class="foot-brand">LineAgeMap</div>
-          <div class="foot-sub">Simple. Nostalgic. Shareable.</div>
-        </div>
-        <div class="foot-right">
-          <span>© <span id="year"></span></span>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <link rel="stylesheet" href="/static/css/map-accordion.css" />
-  <script src="/static/js/nav.js"></script>
-  <script src="/static/js/map-accordion.js"></script>
+{% block scripts %}
   <script>
-    document.getElementById("year").textContent = String(new Date().getFullYear());
+    // Data source selection for map.
+    {% if public_slug %}
+      window.MAP_API_URL = "/api/public/{{ public_slug }}/tree";
+    {% elif sample_id %}
+      window.MAP_API_URL = "/api/sample/{{ sample_id }}/tree";
+    {% elif current_user %}
+      window.MAP_API_URL = "/api/tree/me";
+    {% else %}
+      window.MAP_FAMILY_ID = window.MAP_FAMILY_ID || "got";
+    {% endif %}
   </script>
-
-</body>
-</html>
+  <script src="{{ url_for('static', filename='js/map-accordion.js') }}"></script>
+{% endblock %}

@@ -460,9 +460,68 @@ function enablePanZoom(svg, viewport) {
 }
 
 async function loadTreeData(treeName = "gupta") {
-  const res = await fetch(`/api/tree/${encodeURIComponent(treeName)}`);
+  const apiUrl = window.TREE_API_URL || null;
+  const url = apiUrl ? apiUrl : `/api/tree/${encodeURIComponent(treeName)}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load tree JSON (${res.status})`);
   return await res.json();
+}
+
+function subsetFamilyData(data, opts = {}) {
+  // Build a small, readable "above the fold" slice: roots -> depth N.
+  const depth = Number(opts.depth ?? 2);
+  const maxPeople = Number(opts.maxPeople ?? 18);
+
+  const people = Array.isArray(data.people) ? data.people : [];
+  const rels = Array.isArray(data.relationships) ? data.relationships : [];
+
+  const peopleById = new Map(people.map((p) => [String(p.id), p]));
+  const childrenByParent = new Map();
+  const isChild = new Set();
+
+  for (const r of rels) {
+    const pair = getRelPair(r);
+    if (!pair) continue;
+    const parent = String(pair.parent);
+    const child = String(pair.child);
+    if (!childrenByParent.has(parent)) childrenByParent.set(parent, []);
+    childrenByParent.get(parent).push(child);
+    isChild.add(child);
+  }
+
+  const roots = people
+    .map((p) => String(p.id))
+    .filter((id) => !isChild.has(id));
+
+  const start = roots.length ? roots : people.slice(0, 2).map((p) => String(p.id));
+  const keep = new Set();
+  const q = start.map((id) => ({ id, d: 0 }));
+
+  while (q.length && keep.size < maxPeople) {
+    const cur = q.shift();
+    if (!cur) break;
+    if (keep.has(cur.id)) continue;
+    if (!peopleById.has(cur.id)) continue;
+    keep.add(cur.id);
+    if (cur.d >= depth) continue;
+    const kids = childrenByParent.get(cur.id) || [];
+    for (const k of kids) {
+      if (keep.size >= maxPeople) break;
+      q.push({ id: String(k), d: cur.d + 1 });
+    }
+  }
+
+  const keepRels = rels.filter((r) => {
+    const pair = getRelPair(r);
+    if (!pair) return false;
+    return keep.has(String(pair.parent)) && keep.has(String(pair.child));
+  });
+
+  return {
+    ...data,
+    people: people.filter((p) => keep.has(String(p.id))),
+    relationships: keepRels,
+  };
 }
 
 function wireFitUI(svg, panZoomApi) {
@@ -484,11 +543,29 @@ function wireFitUI(svg, panZoomApi) {
   });
 }
 
-export async function initTree(treeName = "gupta") {
+export async function initTree(treeName = "got") {
   const svg = document.querySelector("#treeSvg");
   if (!svg) throw new Error("Missing #treeSvg element");
 
-  const data = await loadTreeData(treeName);
+  // Clear any previous render
+  svg.innerHTML = "";
+
+  let data = await loadTreeData(treeName);
+
+  // Optional: condensed view for a bigger, easier-to-read first render.
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+  const mobileOnly = window.TREE_PREVIEW_MOBILE_ONLY !== false;
+  const previewMode = Boolean(window.TREE_PREVIEW_MODE) && (!mobileOnly || isMobile);
+  const moreBtn = document.getElementById("treeMoreBtn");
+  if (previewMode) {
+    data = subsetFamilyData(data, {
+      depth: window.TREE_PREVIEW_DEPTH ?? 2,
+      maxPeople: window.TREE_PREVIEW_MAX ?? 18,
+    });
+    if (moreBtn) moreBtn.hidden = false;
+  } else {
+    if (moreBtn) moreBtn.hidden = true;
+  }
   const { nodes: graphNodes, links: graphLinks } = buildGeneDAG(data);
 
   const laid = dagreLayout(graphNodes, graphLinks, TREE_CFG.dagre);
@@ -510,10 +587,20 @@ export async function initTree(treeName = "gupta") {
   // Start centered/tight
   panZoomApi.reset();
   fitTreeToScreen(svg);
+
+  // One-click expand to full tree
+  if (moreBtn && !moreBtn._wired) {
+    moreBtn._wired = true;
+    moreBtn.addEventListener("click", () => {
+      window.TREE_PREVIEW_MODE = false;
+      initTree(String(treeName).toLowerCase()).catch((e) => console.error(e));
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   const svg = document.querySelector("#treeSvg");
   if (!svg) return;
-  initTree("gupta").catch((e) => console.error(e));
+  const fam = (window.TREE_FAMILY_ID || "got");
+  initTree(String(fam).toLowerCase()).catch((e) => console.error(e));
 });

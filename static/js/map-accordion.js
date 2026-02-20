@@ -3,7 +3,12 @@
    Data source: /api/tree/<family>
 */
 (function () {
-  var FAMILY_NAME = 'gupta';
+  var FAMILY_NAME = (window.MAP_FAMILY_ID || 'gupta');
+  var API_URL = window.MAP_API_URL || null;
+
+  function isDesktop() {
+    return window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
+  }
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -151,6 +156,27 @@
 
   function buildAccordion(root, countries) {
     root.innerHTML = '';
+
+    // Desktop: add a single "World" overview first (all pins + readable list)
+    if (isDesktop()) {
+      var allPeople = [];
+      var cn = Object.keys(countries);
+      for (var a = 0; a < cn.length; a++) {
+        var c0 = countries[cn[a]];
+        var states0 = c0.states;
+        var s0 = Object.keys(states0);
+        for (var b = 0; b < s0.length; b++) {
+          var st0 = states0[s0[b]];
+          var cits0 = Object.keys(st0.cities);
+          for (var d = 0; d < cits0.length; d++) {
+            var city0 = st0.cities[cits0[d]];
+            for (var e = 0; e < city0.people.length; e++) allPeople.push(city0.people[e]);
+          }
+        }
+      }
+      root.appendChild(buildWorldOverview(allPeople));
+    }
+
     var countryNames = Object.keys(countries).sort();
     for (var i = 0; i < countryNames.length; i++) {
       var cName = countryNames[i];
@@ -203,6 +229,9 @@
       cMap.addEventListener('click', function () { hideTip(cTip); });
 
       cBody.appendChild(cMap);
+
+      // Mobile-friendly: show a readable grid list for this country (2+ per row)
+      cBody.appendChild(buildPeopleGridForCountry(c));
 
       // states accordion
       for (var si = 0; si < stateNames.length; si++) {
@@ -281,6 +310,102 @@
     }
   }
 
+  function buildWorldOverview(people) {
+    var wrap = document.createElement('details');
+    wrap.className = 'acc accWorld';
+    wrap.open = true;
+
+    var sum = document.createElement('summary');
+    sum.className = 'accHead';
+    sum.innerHTML = '<span class="accTitle">World</span>';
+    wrap.appendChild(sum);
+
+    var body = document.createElement('div');
+    body.className = 'accBody';
+
+    var map = buildMapCard('World', 240);
+    var tip = createTip(map);
+
+    // pins
+    for (var i = 0; i < people.length; i++) {
+      var p = people[i];
+      var loc = p.location || {};
+      if (!loc.country || loc.lat == null || loc.lng == null) continue;
+      var pin = pinEl(p, loc.country, loc.region || '', loc.city || '');
+      map.appendChild(pin);
+      (function (pinRef, meta) {
+        pinRef.addEventListener('mouseenter', function () { showTip(map, tip, pinRef, meta); });
+        pinRef.addEventListener('mouseleave', function () { hideTip(tip); });
+        pinRef.addEventListener('focus', function () { showTip(map, tip, pinRef, meta); });
+        pinRef.addEventListener('blur', function () { hideTip(tip); });
+        pinRef.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var open = tip.classList.contains('open') && tip._openFor === pinRef;
+          if (open) { hideTip(tip); tip._openFor = null; }
+          else { tip._openFor = pinRef; showTip(map, tip, pinRef, meta); }
+        });
+      })(pin, pin._meta);
+    }
+    map.addEventListener('click', function () { hideTip(tip); });
+
+    body.appendChild(map);
+    body.appendChild(buildPeopleGrid(people));
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function buildPeopleGridForCountry(countryObj) {
+    var people = [];
+    var states = countryObj.states;
+    var sNames = Object.keys(states);
+    for (var i = 0; i < sNames.length; i++) {
+      var st = states[sNames[i]];
+      var cNames = Object.keys(st.cities);
+      for (var j = 0; j < cNames.length; j++) {
+        var city = st.cities[cNames[j]];
+        for (var k = 0; k < city.people.length; k++) people.push(city.people[k]);
+      }
+    }
+    return buildPeopleGrid(people, true);
+  }
+
+  function buildPeopleGrid(people, compact) {
+    var grid = document.createElement('div');
+    grid.className = compact ? 'peopleGrid peopleGrid--compact' : 'peopleGrid';
+
+    // stable ordering
+    people = people.slice().sort(function (a, b) {
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+
+    for (var i = 0; i < people.length; i++) {
+      var p = people[i];
+      var loc = p.location || {};
+      var age = guessAge(p);
+      var card = document.createElement('div');
+      card.className = 'personCard';
+      card.innerHTML =
+        '<img class="personPhoto" alt="" src="' + escapeAttr(p.photo || '/static/img/placeholder-avatar.png') + '">' +
+        '<div class="personMeta">' +
+          '<div class="personName">' + escapeHtml(p.name || '') + '</div>' +
+          '<div class="personSub">' +
+            (age ? ('Age ' + escapeHtml(age) + ' • ') : '') +
+            escapeHtml([loc.city, loc.region].filter(Boolean).join(', ')) +
+          '</div>' +
+        '</div>';
+
+      // More info on hover (desktop) / long-press friendly via title
+      var extra = [loc.city, loc.region, loc.country].filter(Boolean).join(', ');
+      if (extra) card.title = extra;
+      grid.appendChild(card);
+    }
+    return grid;
+  }
+
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] || c;
@@ -291,7 +416,8 @@
     var root = document.getElementById('mapAccRoot');
     if (!root) return;
 
-    fetch('/api/tree/' + encodeURIComponent(FAMILY_NAME))
+    var url = API_URL ? API_URL : ('/api/tree/' + encodeURIComponent(FAMILY_NAME));
+    fetch(url)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var people = (data && data.people) ? data.people : [];

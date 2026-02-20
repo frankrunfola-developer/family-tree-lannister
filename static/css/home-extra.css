@@ -4,3 +4,259 @@
 .homeSprig--tl{left:-22px;top:-22px;transform:rotate(-8deg)}
 .homeSprig--br{right:-24px;bottom:-26px;transform:rotate(172deg)}
 .landingHero{position:relative}
+
+/* Tighten the hero typography a bit and give it more breathing room */
+.landingHero{
+  padding-top: 24px;
+  padding-bottom: 8px;
+  gap: 26px;
+  transform: none;
+}
+
+.landingHero h1{
+  font-size: clamp(32px, 4.2vw, 52px);
+}
+
+/* =========================================================
+   Home (auth + previews) — keep the existing look
+   ========================================================= */
+
+.landingSub{
+  margin: 10px auto 18px;
+  max-width: 720px;
+  text-align:center;
+  color: var(--ink-2);
+  font-size: 1.02rem;
+}
+
+.authCard{
+  width: min(560px, 92vw);
+  margin: 12px auto 22px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(120,92,70,.25);
+  box-shadow: 0 10px 24px rgba(60,40,25,.14);
+  overflow: hidden;
+}
+
+@media (max-width: 520px){
+  .landingHero{ padding-top: 16px; gap: 18px; }
+  .landingHero h1{ font-size: clamp(24px, 7.5vw, 34px); }
+  .landingSub{ font-size: .98rem; }
+}
+
+.authTabs{
+  display:flex;
+  gap:0;
+  background: rgba(110,80,58,.18);
+  border-bottom: 1px solid rgba(120,92,70,.18);
+}
+
+.authTab{
+  flex:1;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: var(--ink-1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.authTab.is-active{
+  background: rgba(255,255,255,.55);
+  box-shadow: inset 0 -2px 0 rgba(120,92,70,.35);
+}
+
+.authPanel{display:none;padding: 14px 16px 16px;}
+.authPanel.is-active{display:block;}
+
+.authLabel{
+  display:block;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin: 8px 0 6px;
+}
+
+.authField{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(120,92,70,.25);
+  background: rgba(255,255,255,.65);
+}
+
+.authIcon{opacity:.65; width: 22px; text-align:center;}
+
+.authField input{
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  color: var(--ink-1);
+}
+
+.authBtn{
+  display:block;
+  width: min(340px, 92%);
+  margin: 14px auto 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(120,92,70,.45);
+  background: rgba(160,120,80,.55);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(60,40,25,.18);
+}
+
+.authBtn:hover{filter: brightness(1.02);}
+
+.authMetaRow{display:flex;justify-content:center;margin-top:6px;}
+.authLink{color: var(--ink-2); text-decoration: underline;}
+.authHint{color: var(--ink-2); font-size: .92rem; text-align:center;}
+
+.authStatus{
+  padding: 10px 14px;
+  border-top: 1px solid rgba(120,92,70,.18);
+  background: rgba(255,255,255,.6);
+  color: var(--ink-1);
+}
+
+.homePreviewRow{
+  width: min(980px, 92vw);
+  margin: 18px auto 8px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.homePreviewCard{
+  border-radius: 18px;
+  background: rgba(255,255,255,.50);
+  border: 1px solid rgba(120,92,70,.20);
+  box-shadow: 0 10px 20px rgba(60,40,25,.12);
+  overflow:hidden;
+}
+
+.homePreviewHead{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(120,92,70,.14);
+}
+
+.homePreviewHead h2{margin:0;font-size:1.22rem;color:var(--ink-1);}
+
+.homePreviewCta{
+  display:block;
+  padding: 10px 14px 14px;
+  text-align:right;
+  color: var(--ink-2);
+  text-decoration:none;
+}
+.homePreviewCta:hover{text-decoration: underline;}
+
+/* --- Tree preview --- */
+.treePreview{position:relative;padding: 10px 14px 6px;}
+.treePreviewRow{display:flex;justify-content:center;gap: 12px;flex-wrap:wrap;}
+.treeNode{
+  width: 88px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(120,92,70,.18);
+  padding: 8px 8px 6px;
+  text-align:center;
+}
+.nodePhoto{
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(120,92,70,.22);
+  box-shadow: 0 6px 10px rgba(60,40,25,.12);
+}
+.nodeName{margin-top:6px;font-size:.86rem;color:var(--ink-1);font-weight:600;}
+
+.treePreviewLinks{position:relative;height: 22px;margin: 6px 0;}
+.treeLinkStem{
+  position:absolute;left:50%;top:0;transform:translateX(-50%);
+  width:2px;height:22px;background: rgba(120,92,70,.35);
+  border-radius: 2px;
+}
+.treeLinkBar{
+  position:absolute;left: 18%;right: 18%;top: 12px;
+  height:2px;background: rgba(120,92,70,.35);
+  border-radius: 2px;
+}
+
+/* --- Timeline preview --- */
+.timelinePreview{position:relative;padding: 10px 14px 6px;}
+.tlLine{position:absolute;left: 28px;top: 16px;bottom: 16px;width:2px;background: rgba(120,92,70,.32);border-radius:2px;}
+.tlItem{display:flex;align-items:center;gap: 12px;padding: 10px 0;}
+.tlPhoto{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(120,92,70,.22);background:#fff;}
+.tlText{display:flex;flex-direction:column;gap:2px;}
+.tlName{font-weight:700;color:var(--ink-1);}
+.tlSub{color:var(--ink-2);font-size:.92rem;}
+
+/* Compact timeline preview (used on landing/samples feature cards) */
+.timelinePreview .miniLine{
+  width: 86%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(95,65,46,.32);
+  margin: 16px auto 0;
+}
+
+.timelinePreview .miniAvatarRow{
+  width: 100%;
+  display:flex;
+  justify-content: space-evenly;
+  gap: 10px;
+  padding: 14px 8px 12px;
+}
+
+.timelinePreview .miniAvatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.82);
+  border: 1px solid rgba(120,92,70,.25);
+  box-shadow: 0 10px 18px rgba(60,40,25,.10);
+  overflow:hidden;
+}
+
+.timelinePreview .miniAvatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display:block;
+}
+
+@media (max-width: 760px){
+  .homePreviewRow{grid-template-columns: 1fr;}
+}
+
+/* Feature previews used inside homePreviewCard */
+.treePreviewSvg{
+  width: 100%;
+  height: 150px;
+  display:block;
+  border-radius: 16px;
+}
+
+.mapPreview{
+  height: 150px;
+  border-radius: 16px;
+  border: 1px solid rgba(120,92,70,.22);
+  background: rgba(255,255,255,.45);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+
+.mapPreviewInner{
+  font-weight: 800;
+  opacity: .78;
+}

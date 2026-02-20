@@ -1,0 +1,111 @@
+/* static/css/auth.css
+   Pretty auth UI matching the paper/sepia aesthetic.
+*/
+
+.authWrap{
+  padding: 34px 12px 60px;
+  display: grid;
+  place-items: center;
+}
+
+.authCard{
+  width: min(560px, 94vw);
+  border-radius: 18px;
+  background: rgba(255,255,255,.62);
+  border: 1px solid rgba(120,92,70,.25);
+  box-shadow: 0 14px 28px rgba(60,40,25,.14);
+  overflow: hidden;
+}
+
+.authHeader{
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid rgba(120,92,70,.16);
+}
+
+.authTitle{
+  font-family: var(--serif, Georgia, serif);
+  font-weight: 700;
+  font-size: 1.65rem;
+  color: rgba(90,60,42,.92);
+}
+
+.authSub{
+  margin-top: 6px;
+  color: var(--ink-2, rgba(70,55,45,.82));
+  font-size: .98rem;
+}
+
+.authNotice{
+  margin: 14px 18px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: .92rem;
+}
+
+.authNotice.error{
+  background: rgba(160,60,60,.10);
+  border: 1px solid rgba(160,60,60,.22);
+  color: rgba(120,40,40,.92);
+}
+
+.authForm{
+  padding: 14px 18px 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.authLabel{
+  font-weight: 900;
+  font-size: .78rem;
+  letter-spacing: .10em;
+  color: rgba(95,65,46,.78);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.authInput{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(120,92,70,.28);
+  background: rgba(255,255,255,.72);
+  outline: none;
+}
+
+.authInput:focus{
+  border-color: rgba(120,92,70,.55);
+  box-shadow: 0 0 0 4px rgba(120,92,70,.12);
+}
+
+.authActions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+
+/* Tabs (Sign Up / Log In) */
+.authTabs{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: rgba(255,255,255,.25);
+  border-bottom: 1px solid rgba(120,92,70,.18);
+}
+.authTab{
+  text-align:center;
+  padding: 14px 10px;
+  text-decoration:none;
+  font-family: var(--serif, Georgia, serif);
+  font-weight: 800;
+  color: rgba(90,60,42,.82);
+  border-bottom: 3px solid transparent;
+}
+.authTab:hover{ background: rgba(255,255,255,.28); }
+.authTab.is-active{
+  color: rgba(75,50,36,.95);
+  border-bottom-color: rgba(160,120,70,.75);
+}

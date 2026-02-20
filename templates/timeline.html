@@ -1,139 +1,44 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LineAgeMap — Timeline</title>
+{% extends "base.html" %}
+{% set active_page = "timeline" %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav-pro.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/timeline.css') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
-  </head>
+{% block title %}LineAgeMap — Timeline{% endblock %}
 
-  <body class="app">
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/timeline.css') }}">
+{% endblock %}
 
-    <!-- Navbar (matches your nav-pro.css) -->
-    <header class="topbar">
-      <div class="topbar-pro">
-        <!-- Left: brand icon -->
-        <a class="brandIcon" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
-          <span class="brandMark">
-            <img src="{{ url_for('static', filename='img/favicon.ico') }}" alt="">
-          </span>
-        </a>
+{% block content %}
+  <div class="appFrameShell">
+    <div class="appFrameCard">
+  <div class="pillTitle">TIMELINE</div>
 
-        <!-- Center: title -->
-        <a class="brandTitle" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">LineAgeMap</a>
-
-        <!-- Right: actions -->
-        <div class="topbar-right" aria-label="Actions">
-          <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 11.5l9-8 9 8" />
-              <path d="M6.5 10.5V20h11V10.5" />
-            </svg>
-          </a>
-
-          <button class="navbtn" id="navBtn" type="button" aria-expanded="false" aria-controls="topnavPanel" aria-label="Menu">
-            <span class="navbtn-bars" aria-hidden="true"></span>
-          </button>
-        </div>
-      </div>
-
-      <div class="topnav-panel" id="topnavPanel" hidden>
-        <a href="{{ url_for('tree_view') }}">Tree</a>
-        <a href="{{ url_for('map_view') }}">Map</a>
-        <a href="{{ url_for('timeline_view') }}">Timeline</a>
-      </div>
-    </header>
-
-    <main class="page">
-      <div class="pillTitle">TIMELINE</div>
-
-      <header class="tlHead">
-        <h1 class="tlHead__title">Your family story over time</h1>
-
-        <div class="tlControls">
-          <div class="tlSearch">
-            <input id="tlSearch" type="search" placeholder="Search names, places, events…" autocomplete="off" />
-          </div>
-
-          <div class="tlFilters">
-            <button class="tlChip is-active" data-type="all" type="button">All</button>
-            <button class="tlChip" data-type="birth" type="button">Births</button>
-            <button class="tlChip" data-type="death" type="button">Deaths</button>
-            <button class="tlChip" data-type="marriage" type="button">Marriages</button>
-            <button class="tlChip" data-type="move" type="button">Moves</button>
-            <button class="tlChip" data-type="other" type="button">Other</button>
-          </div>
-        </div>
-      </header>
-
-      <section class="tlWrap tlWrap--snake">
-  <div class="tlStatusRow">
-    <div class="tlSnakeControls" aria-label="Timeline layout controls">
-      <label class="tlLabel">
-        Density
-        <select id="tlDensity" class="tlSelect">
-          <option value="airy" selected>Airy</option>
-          <option value="cozy">Cozy</option>
-        </select>
-      </label>
-      <label class="tlLabel">
-        Cards/row
-        <select id="tlCols" class="tlSelect">
-          <option value="auto" selected>Auto</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-      </label>
-      <label class="tlLabel">
-        Sort
-        <button id="tlSort" class="tlSelect tlSortBtn" type="button" data-order="asc" aria-label="Sort timeline">Asc</button>
-      </label>
+  <section class="tlShell" aria-label="Family Timeline">
+    <div class="tlTop">
+      <div class="tlTitle">Lineage Map</div>
+      <div id="tlStatus" class="tlStatus">Loading timeline…</div>
     </div>
 
-    <div id="tlStatus" class="tlStatus">Loading timeline…</div>
+    <div id="tlSnakeRoot" class="tlSnakeRoot" data-density="airy">
+      <svg id="tlSnakeSvg" class="tlSnakeSvg" aria-hidden="true"></svg>
+      <div id="tlSnakeCards" class="tlSnakeCards" aria-live="polite"></div>
+    </div>
+  </section>
+    </div>
   </div>
+{% endblock %}
 
-  <div id="tlSnakeRoot" class="tlSnakeRoot" data-density="airy">
-    <svg id="tlSnakeSvg" class="tlSnakeSvg" aria-hidden="true"></svg>
-    <div id="tlSnakeCards" class="tlSnakeCards" aria-live="polite"></div>
-  </div>
-</section>
-
-    </main>
-
-    <script>
-    // match your active family id
-    window.TIMELINE_FAMILY_ID = window.TIMELINE_FAMILY_ID || "gupta";
-
-    // mobile menu toggle (matches your nav CSS)
-    (function(){
-      const btn = document.getElementById("navBtn");
-      const panel = document.getElementById("topnavPanel");
-      if(!btn || !panel) return;
-
-      btn.addEventListener("click", () => {
-        const open = btn.getAttribute("aria-expanded") === "true";
-        btn.setAttribute("aria-expanded", String(!open));
-        panel.hidden = open;
-        panel.classList.toggle("topnav-panel--open", !open);
-      });
-
-      document.addEventListener("click", (e) => {
-        if (panel.hidden) return;
-        if (panel.contains(e.target) || btn.contains(e.target)) return;
-        btn.setAttribute("aria-expanded","false");
-        panel.hidden = true;
-        panel.classList.remove("topnav-panel--open");
-      });
-    })();
-  </script>
-
-    <script src="{{ url_for('static', filename='js/timeline.js') }}"></script>
-  </body>
-</html>
+{% block scripts %}
+<script>
+  // Data source selection for timeline.
+  {% if public_slug %}
+    window.TIMELINE_API_URL = "/api/public/{{ public_slug }}/tree";
+  {% elif sample_id %}
+    window.TIMELINE_API_URL = "/api/sample/{{ sample_id }}/tree";
+  {% elif current_user %}
+    window.TIMELINE_API_URL = "/api/tree/me";
+  {% else %}
+    window.TIMELINE_API_URL = "/api/tree/got";
+  {% endif %}
+</script>
+<script src="{{ url_for('static', filename='js/timeline.js') }}"></script>
+{% endblock %}

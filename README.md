@@ -1,15 +1,17 @@
-# LineAgeMap (Flask + SVG Family Tree Demo)
+# LineAgeMap (Flask)
 
-A lightweight **Flask** app that renders a **clean, map-like family tree** (zoom + pan) using an SVG renderer.
-
-This build is intentionally simple:
-- **No upload UI**
-- **No in-browser JSON editor**
-- Read-only tree data served from disk via **`/api/tree/<name>`**
+A lightweight **Flask** app with a sepia/paper aesthetic that showcases:
+- **Landing page** with **Login / Register** + demo previews
+- **Family Tree** (SVG + pan/zoom)
+- **Family Timeline**
+- **Family Map** (world map pins + country/state/city accordion)
+- **User accounts** with **saved state** (SQLite on a persistent disk)
+- **Per-user family data** (each account owns its own `family.json`)
+- Optional **public share link** (`/f/<public_slug>`) for growth/virality
 
 ---
 
-## Quickstart
+## Run locally
 
 ### Windows (PowerShell)
 ```powershell
@@ -20,7 +22,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-### Bash / Git Bash / WSL / macOS / Linux
+### macOS / Linux / WSL
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -33,92 +35,155 @@ Open: http://127.0.0.1:5000
 
 ---
 
-## Data files (what loads the tree)
+## Data files
 
-Tree JSON lives in `data/` and follows this naming convention:
+### Demo families (shared)
 
-- `data/family_gupta.json`  → loads at `/api/tree/gupta`
-- `data/family_got.json`    → loads at `/api/tree/got`
+Family JSON demo files live in your data directory and follow this convention:
 
-The default demo tree name is set in `static/js/tree.js`:
+- `family_got.json`  → loads at `/api/tree/got`
+- `family_gupta.json` → loads at `/api/tree/gupta`
 
-```js
-initTree("gupta");
-```
+### Real product mode (per-user)
+
+When a user registers, the app creates a private file on the persistent disk:
+
+`<DATA_DIR>/families/<user_id>/family.json`
+
+This file is seeded by copying `family_got.json` (as a starter).
+
+Authenticated pages load data from:
+
+`GET /api/tree/me`
+
+So "my account = my data" is deterministic.
+
+---
+
+## User accounts + saved state
+
+User accounts are stored in SQLite at:
+
+- `<DATA_DIR>/users.db`
+
+Each user row includes:
+
+- `family_file` → path to the owned file (e.g., `<DATA_DIR>/families/42/family.json`)
+- `public_slug` → share slug (e.g., `frank`)
+- `is_public` → 0/1 toggle
+- `state_json` → small UI preferences (keep it lightweight)
+
+### Key endpoints
+
+- `POST /api/register` `{email, password}` → creates user + logs in
+- `POST /api/login` `{email, password}` → logs in
+- `POST /api/logout` → logs out
+- `GET /api/me` → current auth + state
+- `POST /api/me/state` `{family_id}` → saves preferred family
+
+### Per-user family + public sharing
+
+- `GET /api/tree/me` → loads the logged-in user's owned `family.json`
+- `POST /api/me/public` `{is_public:true|false}` → enables/disables public sharing
+- `GET /api/public/<slug>/tree` → public read-only family JSON (only when enabled)
+- `GET /f/<slug>` → public landing page for that family
+
+---
+
+## How to link a specific login to a specific saved JSON family file
+
+This build supports the **real product** model:
+
+- Each user account owns a private file at: `<DATA_DIR>/families/<user_id>/family.json`
+- Authenticated pages load that file via: `GET /api/tree/me`
+
+That makes the link **deterministic**: *the login account is the data owner*.
+
+### Seeding new users
+On registration, the app seeds the user's private file by copying the demo GOT file:
+
+- `data/family_got.json` → `<DATA_DIR>/families/<user_id>/family.json`
+
+You can change the seed source in `app.py` if you want Gupta or an empty starter instead.
+
+### Optional: keep "demo families" for marketing
+Demo JSON files are still available for public/demo pages:
+
+- `/api/tree/got`
+- `/api/tree/gupta`
+
+But authenticated pages should use `/api/tree/me` so user data is never shared.
+
+### Public sharing (growth)
+Users can optionally share a read-only public page:
+
+- Toggle public: `POST /api/me/public` with `{ "is_public": true }`
+- Public page: `/f/<public_slug>`
+- Public JSON: `/api/public/<slug>/tree`
+
+---
+
+## Notes on the UI changes in this build
+
+- **Navbar** is standardized across pages (icon + “LineAgeMap” centered).
+- **Menu button** spacing is fixed (hamburger + “Menu” label).
+- **Tree page** starts in a **condensed view** for readability, with a **“See more”** button to expand.
+- Landing hero typography is slightly smaller and has more vertical breathing room (and scales on mobile).
+- **Map page**:
+  - Desktop shows a **World** overview with all pins + a readable list of people.
+  - Country sections include a mobile-friendly grid of people (2+ per row).
 
 ---
 
 ## Render hosting (persistent disk)
 
-`app.py` reads `DATA_DIR` from the environment:
+`DATA_DIR` controls where JSON files and the SQLite DB live.
 
-- If `DATA_DIR` is set (recommended on Render with a mounted disk), data is read from there.
-- If not set, it defaults to a local `data/` folder.
+Example on Render:
+- Mount a persistent disk
+- Set `DATA_DIR=/var/data` (or whatever mount path you configure)
 
-Example (bash):
+Local example (bash):
 ```bash
 export DATA_DIR=/var/data
 ```
 
-Example (PowerShell):
+Local example (PowerShell):
 ```powershell
 $env:DATA_DIR="C:\lineagemap-data"
 ```
 
 ---
 
-## File structure (with comments)
+## Project structure
 
 ```text
 lineagemap/
-├─ app.py                    # Flask server (serves index + /api/tree/<name>)
-├─ requirements.txt          # Python deps
-├─ README.md                 # This file
-│
-├─ data/
-│  ├─ family_gupta.json      # Demo tree (Gupta)
-│  └─ family_got.json        # Demo tree (Game of Thrones)
-│
+├─ app.py
+├─ requirements.txt
+├─ README.md
+├─ data/                      # default local data dir (if DATA_DIR not set)
+│  ├─ family_got.json
+│  └─ family_gupta.json
 ├─ templates/
-│  └─ index.html             # Clean landing page + SVG canvas
-│
+│  ├─ index.html              # landing page (auth + previews)
+│  ├─ tree.html
+│  ├─ map.html
+│  ├─ timeline.html
+│  └─ _topbar.html            # shared navbar
 └─ static/
    ├─ css/
-   │  └─ styles.css          # Nostalgic, clean theme
+   │  ├─ styles.css
+   │  ├─ home-extra.css
+   │  ├─ map-accordion.css
+   │  └─ timeline.css
    ├─ js/
-   │  ├─ tree.js             # Loads JSON + layout + pan/zoom
-   │  ├─ familyTree.js       # SVG renderer (cards, links, labels)
-   │  └─ treeConfig.js       # Shared config constants
-   └─ uploads/
-      ├─ gupta/              # Example images (optional; referenced by photoUrl)
-      │  ├─ Indrajit.png      # example
-      │  ├─ adalina.png       # example
-      │  └─ atreyee.png       # example
-      ├─ lannister/
-      │  ├─ cersei.png        # example
-      │  ├─ jaime.png         # example
-      │  └─ joffrey.png       # example
-      └─ stark/
-         ├─ arya.png          # example
-         ├─ bran.png          # example
-         └─ eddard.png        # example
+   │  ├─ nav.js
+   │  ├─ tree.js
+   │  ├─ timeline.js
+   │  └─ map-accordion.js
+   └─ img/
+      ├─ favicon.ico
+      ├─ world-muted.png
+      └─ placeholder-avatar.png
 ```
-
-Notes:
-- Image files are optional. If a person node has `photoUrl`, the renderer shows it.
-- If no `photoUrl` is present, the node shows a subtle placeholder circle.
-
----
-
-## API
-
-- `GET /` → landing page
-- `GET /api/tree/<name>` → returns `DATA_DIR/family_<name>.json`
-
-
-
-## Landing Page
-The root route `/` is a view chooser with big buttons for:
-- `/tree`
-- `/map`
-- `/timeline`

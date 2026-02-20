@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% set active_page = "login" %}
+{% set body_class = "marketing" %}
+
+{% block title %}LineAgeMap — Login{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <section class="authWrap" aria-label="Login">
+    <div class="authCard">
+
+      <div class="authTabs" role="tablist" aria-label="Authentication">
+        <a class="authTab " role="tab" aria-selected="false" href="{{ url_for('register') }}">Sign Up</a>
+        <a class="authTab is-active" role="tab" aria-selected="true" href="{{ url_for('login') }}">Log In</a>
+      </div>
+
+      <div class="authHeader">
+        <div class="authTitle">Welcome back</div>
+        <div class="authSub">Log in to view and edit your private family.</div>
+      </div>
+
+      {% if error %}
+        <div class="authNotice error">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('login_post') }}" class="authForm">
+        <label class="authLabel" for="email">Email</label>
+        <input class="authInput" id="email" type="email" name="email" required autocomplete="email" />
+
+        <label class="authLabel" for="password">Password</label>
+        <input class="authInput" id="password" type="password" name="password" required autocomplete="current-password" />
+
+        <div class="authActions">
+          <a class="btn ghost" href="{{ url_for('register') }}">Create account</a>
+          <button class="btn primary" type="submit">Login</button>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

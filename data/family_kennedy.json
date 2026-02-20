@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "family_name": "Kennedy Family (Sample)",
+    "note": "Sample dataset for exploring the app UI."
+  },
+  "people": [
+    {
+      "id": "joseph_kennedy",
+      "name": "Joseph P. Kennedy Sr.",
+      "born": "1888",
+      "died": "1969",
+      "photo": "",
+      "location": {"city": "Boston", "region": "MA", "country": "USA"},
+      "events": []
+    },
+    {
+      "id": "rose_kennedy",
+      "name": "Rose Fitzgerald Kennedy",
+      "born": "1890",
+      "died": "1995",
+      "photo": "",
+      "location": {"city": "Boston", "region": "MA", "country": "USA"},
+      "events": []
+    },
+    {
+      "id": "jfk",
+      "name": "John F. Kennedy",
+      "born": "1917",
+      "died": "1963",
+      "photo": "",
+      "location": {"city": "Brookline", "region": "MA", "country": "USA"},
+      "events": []
+    },
+    {
+      "id": "rfk",
+      "name": "Robert F. Kennedy",
+      "born": "1925",
+      "died": "1968",
+      "photo": "",
+      "location": {"city": "Brookline", "region": "MA", "country": "USA"},
+      "events": []
+    },
+    {
+      "id": "ted",
+      "name": "Edward 'Ted' Kennedy",
+      "born": "1932",
+      "died": "2009",
+      "photo": "",
+      "location": {"city": "Boston", "region": "MA", "country": "USA"},
+      "events": []
+    }
+  ],
+  "relationships": [
+    {"child": "jfk", "parent": "joseph_kennedy"},
+    {"child": "jfk", "parent": "rose_kennedy"},
+    {"child": "rfk", "parent": "joseph_kennedy"},
+    {"child": "rfk", "parent": "rose_kennedy"},
+    {"child": "ted", "parent": "joseph_kennedy"},
+    {"child": "ted", "parent": "rose_kennedy"}
+  ]
+}

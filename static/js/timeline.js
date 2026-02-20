@@ -3,7 +3,8 @@
 // Schema expected: { people:[{name,born,died,location:{city,region,country}, events?:[...] , photo?:... }], relationships:[...] }
 
 (() => {
-  const familyId = (window.TIMELINE_FAMILY_ID || "gupta").toLowerCase();
+  const familyId = (window.TIMELINE_FAMILY_ID || "got").toLowerCase();
+  const apiUrl = window.TIMELINE_API_URL || null;
 
   const elStatus = document.getElementById("tlStatus");
   const elSearch = document.getElementById("tlSearch");
@@ -511,7 +512,8 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r){
   async function load(){
     try{
       setStatus("Loading timeline…");
-      const r = await fetch(`/api/tree/${familyId}`, { headers: { "Accept":"application/json" } });
+      const url = apiUrl ? apiUrl : `/api/tree/${familyId}`;
+      const r = await fetch(url, { headers: { "Accept":"application/json" } });
       if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
       const tree = await r.json();
       allEvents = buildEvents(tree);

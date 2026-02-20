@@ -1,96 +1,56 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LineAgeMap — Tree</title>
+{% extends "base.html" %}
+{% set active_page = "tree" %}
 
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+{% block title %}LineAgeMap — Tree{% endblock %}
 
-    <!-- Base app styles (includes topbar styles) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-
-    <!-- Optional: page-specific tree styles if you have them -->
-    {% if (config and config.get('TREE_CSS')) %}
+{% block head %}
+  {% if (config and config.get('TREE_CSS')) %}
     <link rel="stylesheet" href="{{ url_for('static', filename=config.get('TREE_CSS')) }}" />
-    {% endif %}
-  </head>
+  {% endif %}
+{% endblock %}
 
-  <body class="app">
-    <!-- Header / Nav -->
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="topbar-left">
-          <a class="brandIcon" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
-            <img class="brandMark" src="{{ url_for('static', filename='img/favicon.ico') }}" alt="" aria-hidden="true" />
-          </a>
-          <nav class="topbar-links" aria-label="Primary">
-            <a class="is-active" href="{{ url_for('tree_view') }}">Tree</a>
-            <a href="{{ url_for('map_view') }}">Map</a>
-            <a href="{{ url_for('timeline_view') }}">Timeline</a>
-          </nav>
-        </div>
-
-        <a class="brandTitle" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">LineAgeMap</a>
-
-        <div class="topbar-right" aria-label="Actions">
-          <a class="home-btn" href="{{ url_for('index') }}" aria-label="Home">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 11.5l9-8 9 8" />
-              <path d="M6.5 10.5V20h11V10.5" />
-            </svg>
-          </a>
-
-          <button class="menu-btn" id="navbtn" type="button" aria-expanded="false" aria-controls="navpanel" aria-label="Menu">
-            <span class="menu-icon" aria-hidden="true"></span>
-            <span class="sr-only">Menu</span>
-          </button>
-
-          <div class="menu-panel" id="navpanel" role="navigation" aria-label="Mobile menu">
-            <a href="{{ url_for('tree_view') }}">Tree</a>
-            <a href="{{ url_for('map_view') }}">Map</a>
-            <a href="{{ url_for('timeline_view') }}">Timeline</a>
-            <a href="{{ url_for('index') }}">Home</a>
-          </div>
-        </div>
+{% block content %}
+  <div class="appFrameShell">
+    <div class="appFrameCard">
+  <section class="treeShell" aria-label="Family Tree">
+    <div id="canvas" class="treeCanvas">
+      <div class="treeTools">
+        <button id="fitTreeBtn" class="fit-btn" type="button">Fit to screen</button>
       </div>
-    </header>
+      <svg id="treeSvg" role="img" aria-label="Family tree diagram"></svg>
+    </div>
+  </section>
 
-    <main class="container">
-      <!-- Tree canvas -->
-      <section class="treeShell" aria-label="Family Tree">
-        <div id="canvas" class="treeCanvas">
-          <button id="fitTreeBtn" class="fit-btn" type="button">Fit to screen</button>
-          <svg id="treeSvg" role="img" aria-label="Family tree diagram"></svg>
-        </div>
-      </section>
+  <!-- “Above the fold” preview: first 2 layers. Button expands to full tree. -->
+  <div class="treeMoreWrap" style="text-align:center; margin: 14px 0 4px;">
+    <button id="treeMoreBtn" class="cta-btn" type="button" hidden>See full tree</button>
+  </div>
+    </div>
+  </div>
+{% endblock %}
 
-      <!-- Footer -->
-      <footer class="footer" id="contact">
-        <div class="foot-inner">
-          <div class="foot-left">
-            <div class="foot-brand">LineAgeMap</div>
-            <div class="foot-sub">Simple. Nostalgic. Shareable.</div>
-          </div>
-          <div class="foot-right">
-            <span>© <span id="year"></span></span>
-          </div>
-        </div>
-      </footer>
-    </main>
+{% block scripts %}
+  <!-- Dagre MUST load before tree.js (tree.js reads window.dagre) -->
+  <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
 
-    <!-- Scripts (order matters) -->
-    <script>
-      document.getElementById("year").textContent = String(new Date().getFullYear());
-    </script>
+  <script>
+    // Data source selection for tree.
+    {% if public_slug %}
+      window.TREE_API_URL = "/api/public/{{ public_slug }}/tree";
+    {% elif sample_id %}
+      window.TREE_API_URL = "/api/sample/{{ sample_id }}/tree";
+    {% elif current_user %}
+      window.TREE_API_URL = "/api/tree/me";
+    {% else %}
+      window.TREE_API_URL = "/api/tree/got";
+    {% endif %}
 
-    <!-- Mobile nav behavior -->
-    <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+    // Default: render a readable preview (first 2 layers). The “See full tree” button expands it.
+    window.TREE_PREVIEW_MODE = true;
+    window.TREE_PREVIEW_MOBILE_ONLY = true;
+    window.TREE_PREVIEW_DEPTH = 2;
+    window.TREE_PREVIEW_MAX = 18;
+  </script>
 
-    <!-- Dagre MUST load before tree.js (tree.js reads window.dagre) -->
-    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
-
-    <!-- Tree page logic (ES module imports) -->
-    <script type="module" src="{{ url_for('static', filename='js/tree.js') }}"></script>
-  </body>
-</html>
+  <script type="module" src="{{ url_for('static', filename='js/tree.js') }}"></script>
+{% endblock %}

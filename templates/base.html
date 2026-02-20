@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{% block title %}LineAgeMap{% endblock %}</title>
+
+        <!-- Global Styles -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+
+        {% block head %}{% endblock %}
+
+        {% include "_analytics.html" %}
+    </head>
+
+    <body class="{{ body_class|default('app') }}">
+
+        {% include "_topbar.html" %}
+
+        <main class="page">
+            {% block content %}{% endblock %}
+        </main>
+
+        {% include "_footer.html" %}
+
+        <!-- Global Scripts -->
+        <script>
+      const y = document.getElementById("year");
+      if (y) y.textContent = String(new Date().getFullYear());
+    </script>
+
+        <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+
+        {% block scripts %}{% endblock %}
+
+    </body>
+</html>
