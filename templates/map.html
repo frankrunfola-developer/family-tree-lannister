@@ -3,53 +3,54 @@
 
 {% block title %}LineAgeMap — Map{% endblock %}
 
-{% block content %}
-  <div class="appFrameShell">
-    <div class="appFrameCard">
-  <div class="nav-family" style="margin: 16px auto 6px; max-width: 1100px;">
-    {% if public_slug %}
-      <div class="pillTitle">PUBLIC FAMILY MAP</div>
-    {% elif sample_id %}
-      <div class="pillTitle">SAMPLE MAP</div>
-    {% else %}
-      <div class="pillTitle">MY FAMILY MAP</div>
-    {% endif %}
-  </div>
-
-  <section class="mapShell" aria-label="Family Map" style="max-width: 1100px; margin: 0 auto 22px;">
-    <div id="mapRoot" class="mapRoot">
-      <div class="mapLegend">
-        <div class="mapLegendTitle">Locations</div>
-        <div class="mapLegendSub">Tap a country to zoom into regions and cities.</div>
-      </div>
-
-      <div id="mapAccordion" class="mapAccordion" aria-live="polite"></div>
-    </div>
-  </section>
-    </div>
-  </div>
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
 {% endblock %}
 
-  {% block scripts %}
-    {# Compute API URL outside JS so VSCode JS validator doesn't freak out #}
-  {% if public_slug %}
-    {% set MAP_API_URL = "/api/public/" ~ public_slug ~ "/map" %}
-  {% elif sample_id %}
-    {% set MAP_API_URL = "/api/sample/" ~ sample_id ~ "/map" %}
-  {% elif current_user %}
-    {% set MAP_API_URL = "/api/map/me" %}
-  {% else %}
-    {% set MAP_API_URL = "/api/sample/stark/map" %}
-  {% endif %}
-  
-  <script>
-    // Data source selection for map.
-    window.MAP_API_URL = "{{ MAP_API_URL }}";
+{% block content %}
+<div class="appFrameShell">
+  <div class="appFrameCard">
+    <div class="nav-family nav-family--wide">
+      {% if public_slug %}
+      <div class="pillTitle">PUBLIC FAMILY MAP</div>
+      {% elif sample_id %}
+      <div class="pillTitle">SAMPLE MAP</div>
+      {% else %}
+      <div class="pillTitle">MY FAMILY MAP</div>
+      {% endif %}
+    </div>
 
-    // Optional: compatibility fallback for older JS that might still look at MAP_FAMILY_ID.
-    // This does NOT change the primary source (MAP_API_URL).
-    if (!window.MAP_FAMILY_ID) window.MAP_FAMILY_ID = "stark";
-  </script>
+    <section class="mapShell" aria-label="Family Map">
+      <div id="mapRoot" class="mapRoot">
+        <div class="mapLegend">
+          <div class="mapLegendTitle">Locations</div>
+          <div class="mapLegendSub">Tap a country to zoom into regions and cities.</div>
+        </div>
 
-  <script src="{{ url_for('static', filename='js/map-accordion.js') }}"></script>
+        <div id="mapAccordion" class="mapAccordion" aria-live="polite"></div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{# Map accordion JS expects {people:[...]} so we use TREE endpoints. #}
+{% if public_slug %}
+{% set MAP_API_URL = "/api/public/" ~ public_slug ~ "/tree" %}
+{% elif sample_id %}
+{% set MAP_API_URL = "/api/sample/" ~ sample_id ~ "/tree" %}
+{% elif current_user %}
+{% set MAP_API_URL = "/api/tree/me" %}
+{% else %}
+{% set MAP_API_URL = "/api/sample/stark/tree" %}
+{% endif %}
+
+<script>
+  window.MAP_API_URL = "{{ MAP_API_URL }}";
+  if (!window.MAP_FAMILY_ID) window.MAP_FAMILY_ID = "stark";
+</script>
+
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 {% endblock %}

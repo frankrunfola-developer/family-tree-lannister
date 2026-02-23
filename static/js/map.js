@@ -1,4 +1,5 @@
-/* Map accordion: Country -> State/Province -> City
+/* map.js
+  accordion: Country -> State/Province -> City
    Renders face-only pins and shows an info bubble on hover/tap.
    Data source: /api/public/<slug>/tree OR /api/sample/<id>/tree OR /api/tree/<family>
 */
@@ -33,7 +34,6 @@
     'Canada': { x: 40, y: 36 },
     'United States': { x: 32, y: 48 },
     'India': { x: 64, y: 52 },
-
     'Ontario': { x: 52, y: 34 },
     'New York': { x: 44, y: 40 },
     'California': { x: 18, y: 54 },
@@ -422,7 +422,10 @@
 
     var url = API_URL ? API_URL : ('/api/tree/' + encodeURIComponent(FAMILY_NAME));
     fetch(url)
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
       .then(function (data) {
         var people = (data && data.people) ? data.people : [];
         var grouped = groupPeople(people);
@@ -430,6 +433,7 @@
       })
       .catch(function (err) {
         root.innerHTML = '<div class="mapLoading">Could not load map data.</div>';
+        console.error('Map load failed:', err);
       });
   }
 

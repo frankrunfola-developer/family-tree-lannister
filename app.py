@@ -75,7 +75,6 @@ def get_session_uid() -> int | None:
         return int(raw)
     return None
 
-
 # -----------------------------
 # DB (Users)
 # -----------------------------
@@ -120,9 +119,7 @@ def db_init() -> None:
         con.commit()
 
 
-@app.before_request
-def _ensure_db() -> None:
-    db_init()
+db_init()
 
 
 # -----------------------------

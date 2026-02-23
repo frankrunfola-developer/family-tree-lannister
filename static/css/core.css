@@ -1,5 +1,5 @@
 /* core.css
-   Global theme tokens + base parchment + texture overlay
+   Global theme tokens + layered parchment + texture
 */
 
 /* =========================================================
@@ -59,7 +59,7 @@
 
 html, body{
   height: 100%;
-  background-color: var(--bg);
+  background: var(--bg);
 }
 
 body{
@@ -67,7 +67,51 @@ body{
   font-family: var(--serif);
   color: var(--ink);
 
-  background-color: var(--bg);
+  /* Real parchment is MULTI-LAYER, not a flat fill */
+  background:
+    /* vignette (gives depth + “aged edges”) */
+    radial-gradient(circle at center,
+      rgba(0,0,0,0) 55%,
+      rgba(120, 90, 50, 0.12) 100%
+    ),
+
+    /* warm bloom */
+    radial-gradient(circle at 28% 18%,
+      rgba(255, 250, 240, 0.38),
+      rgba(0,0,0,0) 60%
+    ),
+
+    /* subtle vertical paper variation */
+    linear-gradient(
+      to bottom,
+      #f3e7d9 0%,
+      #e9dccd 50%,
+      #f3e7d9 100%
+    ),
+
+    /* paper texture */
+    url("../img/paper-texture-light.jpg");
+
+  background-blend-mode:
+    normal,
+    multiply,
+    normal,
+    overlay;
+
+  background-size:
+    cover,
+    cover,
+    cover,
+    900px;
+
+  background-position:
+    center,
+    center,
+    center,
+    center;
+
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 
   position: relative;
   isolation: isolate;
@@ -76,31 +120,17 @@ body{
 a{ color: inherit; }
 img{ max-width:100%; height:auto; display:block; }
 
-/* Paper texture overlay (IMPORTANT: behind content) */
-body::after{
-  content:"";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-
-  background-image: url("../img/paper-texture-light.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-
-  opacity: 0.10;
-  mix-blend-mode: multiply;
-  filter: contrast(1.00);
-}
-
 /* =========================================================
    Responsive root token tweaks (shared)
    ========================================================= */
-
-/* tablet */
-@media (min-width: 760px){
-  :root{ --page-pad: 18px; }
+/* ultra small */
+@media (max-width: 360px){
+  :root{
+    --page-pad: 10px;
+    --btn-font: 12.5px;
+    --btn-pad-y: 7px;
+    --btn-pad-x: 10px;
+  }
 }
 
 /* slightly wider phones */
@@ -113,14 +143,9 @@ body::after{
   }
 }
 
-/* ultra small */
-@media (max-width: 360px){
-  :root{
-    --page-pad: 10px;
-    --btn-font: 12.5px;
-    --btn-pad-y: 7px;
-    --btn-pad-x: 10px;
-  }
+/* tablet */
+@media (min-width: 760px){
+  :root{ --page-pad: 18px; }
 }
 
 /* desktop: widen padding */

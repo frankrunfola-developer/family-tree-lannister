@@ -1,82 +1,435 @@
 /* map.css
-   Map panel + pins
+   Single source of truth for Map UI
+   - Accordion map (accMap + pins + tip + grids)
+   - Tight, parchment-institutional styling
+   - Designed to survive aggressive global button/img rules
 */
 
-.map-shell{
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 18px var(--page-pad) 10px;
-  position: relative;
-  z-index: 2;
-}
-.map-panel{
-  background: rgba(246,242,234,.85);
-  border:1px solid rgba(122,79,60,.16);
-  border-radius:24px;
-  padding:14px;
-  box-shadow:0 10px 26px rgba(0,0,0,.05);
-}
-.map-canvas{
-  position:relative;
-  width:100%;
-  aspect-ratio:16/10; /* nicer on mobile */
-  border-radius:18px;
-  overflow:hidden;
-  background: rgba(255,255,255,.35);
-}
-.map-bg{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  filter:saturate(.85) contrast(.95);
-  opacity:.95;
-}
-.map-pins{ position:absolute; inset:0; }
+/* =========================================================
+   Map page: wide + tight framing (requires body.mapPage)
+   ========================================================= */
 
-.avatar-pin{
-  position:absolute;
-  transform: translate(-50%,-50%);
+.mapShell{
+  width: min(1700px, calc(100% - (var(--page-pad) * 2)));
+  margin: 0 auto 18px;
+}
+
+.nav-family--wide{
+  width: min(1700px, calc(100% - (var(--page-pad) * 2)));
+  margin: 14px auto 6px;
+}
+
+/* Let the Map page breathe on desktop without changing other pages */
+.mapPage .appFrameCard{
+  width: min(1800px, calc(100% - (var(--page-pad) * 2)));
+  margin: 0 auto;
+}
+
+/* tighten side padding so map gets real estate */
+.mapPage .appFrameShell{
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 980px){
+  .mapShell,
+  .nav-family--wide{
+    width: min(var(--content-max), calc(100% - (var(--page-pad) * 2)));
+  }
+}
+
+/* =========================================================
+   Map root + legend (tight + polished)
+   ========================================================= */
+
+.mapRoot{
+  display: grid;
+  gap: 10px;
+}
+
+.mapLegend{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.42);
+  box-shadow: 0 10px 22px rgba(40,32,24,0.07);
+}
+
+.mapLegendTitle{
+  font-family: var(--serif);
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(70,50,36,0.92);
+  line-height: 1.05;
+}
+
+.mapLegendSub{
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: rgba(40,32,24,0.68);
+  line-height: 1.25;
+}
+
+/* =========================================================
+   Loading + accordion shells (tight)
+   ========================================================= */
+
+.mapLoading{
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid rgba(40,32,24,0.14);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.52);
+  box-shadow: 0 14px 28px rgba(40,32,24,0.08);
+  color: rgba(40,32,24,0.75);
+}
+
+/* Accordion cards */
+.acc{
+  margin: 0 auto 12px;
+  border: 1px solid rgba(40,32,24,0.14);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.38);
+  box-shadow: 0 16px 30px rgba(40,32,24,0.08);
+  overflow: hidden;
+}
+
+/* allow wide map page containers (do NOT cap to content-max) */
+.mapLoading,
+.acc{
+  max-width: none;
+}
+
+/* nested accordions */
+.acc.sub{
+  margin-top: 10px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.34);
+}
+
+.accHead{
+  list-style: none;
   display:flex;
   align-items:center;
-  gap:10px;
-  pointer-events:none;
-}
-.avatar-pin-img{
-  width:40px;
-  height:40px;
-  border-radius:999px;
-  object-fit:cover;
-  border:3px solid rgba(255,255,255,.92);
-  box-shadow:0 10px 18px rgba(0,0,0,.10);
-}
-.avatar-pin-label{
-  background:rgba(255,255,255,.85);
-  border:1px solid rgba(122,79,60,.14);
-  border-radius:12px;
-  padding:7px 9px;
-  box-shadow:0 10px 18px rgba(0,0,0,.08);
-  max-width:190px;
-}
-.avatar-pin-name{
-  font-family:var(--sans);
-  font-weight:800;
-  font-size:12px;
-  color:rgba(74,46,35,.92);
-}
-.avatar-pin-city{
-  font-family:var(--sans);
-  font-size:11px;
-  color:rgba(74,46,35,.70);
-  margin-top:3px;
+  justify-content:space-between;
+  padding: 10px 12px;
+  cursor:pointer;
+  user-select:none;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.56),
+    rgba(255,255,255,0.30)
+  );
+
+  border-bottom: 1px solid rgba(40,32,24,0.10);
 }
 
-/* desktop */
+.accHead::-webkit-details-marker{ display:none; }
+
+.accTitle{
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(70,50,36,0.92);
+  line-height: 1.1;
+}
+
+.accBody{
+  padding: 12px;
+}
+
+/* =========================================================
+   Map canvas (bigger, richer, less washed-out)
+   ========================================================= */
+
+.accMap{
+  position: relative;
+  isolation: isolate;
+  border-radius: 16px;
+  border: 1px solid rgba(40,32,24,0.16);
+
+  background-color: rgba(239,230,216,0.54);
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: cover; /* CSS controls baseline */
+
+  height: clamp(360px, 56vh, 740px);
+  overflow: hidden;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.24),
+    0 10px 24px rgba(40,32,24,0.08);
+}
+
+/* taller on large desktop, but still sane */
+@media (min-width: 1100px){
+  .accMap{ height: clamp(540px, calc(100vh - 250px), 860px); }
+}
+
+/* overlays — always behind pins */
+.accMap::before,
+.accMap::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index: 2;
+}
+
+/* vignette depth */
+.accMap::before{
+  background: radial-gradient(120% 90% at 50% 40%,
+    rgba(255,255,255,0.16),
+    rgba(40,32,24,0.06) 62%,
+    rgba(40,32,24,0.12) 100%);
+  mix-blend-mode: multiply;
+  opacity: 0.40;
+}
+
+/* gentle contrast pass so land/lines read better */
+.accMap::after{
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.06),
+    rgba(40,32,24,0.09)
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.22;
+}
+
+/* =========================================================
+   People grid (tighter + more consistent)
+   ========================================================= */
+
+.peopleGrid{
+  margin-top: 10px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.peopleGrid--compact{
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.personCard{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+
+  padding: 9px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(40,32,24,0.14);
+
+  background: rgba(255,255,255,0.56);
+  box-shadow: 0 10px 20px rgba(40,32,24,0.07);
+}
+
+.personMeta{ min-width: 0; }
+
+.personPhoto{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 auto;
+
+  border: 2px solid rgba(255,255,255,0.92);
+  box-shadow:
+    0 10px 18px rgba(40,32,24,0.10),
+    0 0 0 1px rgba(120, 85, 35, 0.25);
+
+  image-rendering: auto;
+  transform: translateZ(0);
+}
+
+.personName{
+  font-weight: 900;
+  color: rgba(70,50,36,0.92);
+  line-height: 1.12;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personSub{
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgba(70,50,36,0.70);
+  line-height: 1.2;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personCard:hover{ filter: brightness(1.015); }
+
+@media (max-width: 700px){
+  .peopleGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .peopleGrid--compact{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .personCard{ padding: 9px; }
+  .personPhoto{ width: 40px; height: 40px; }
+}
+
 @media (min-width: 900px){
-  .map-canvas{ aspect-ratio: 16/9; }
-  .avatar-pin-img{ width:46px; height:46px; }
-  .avatar-pin-label{ max-width:220px; padding:8px 10px; border-radius:14px; }
-  .avatar-pin-name{ font-size:13px; }
-  .avatar-pin-city{ font-size:12px; }
+  .personPhoto{ width: 50px; height: 50px; }
+}
+
+/* =========================================================
+   Pins (sharper + more “pin-like”)
+   ========================================================= */
+
+.accMap .pin{
+  position: absolute !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  display: block !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+
+  border-radius: 999px !important;
+  overflow: hidden !important;
+
+  background: rgba(255,255,255,0.66) !important;
+  border: 2px solid rgba(255,255,255,0.92) !important;
+
+  box-shadow:
+    0 12px 22px rgba(40,32,24,0.26),
+    0 0 0 1px rgba(120, 85, 35, 0.32);
+
+  transform: translate(-50%, -50%) !important;
+  cursor: pointer;
+
+  z-index: 25; /* above overlays */
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+/* tiny pointer so it reads as a MAP pin */
+.accMap .pin::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-6px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(255,255,255,0.66);
+  border-right: 1px solid rgba(120, 85, 35, 0.28);
+  border-bottom: 1px solid rgba(120, 85, 35, 0.28);
+  filter: drop-shadow(0 6px 8px rgba(40,32,24,0.18));
+  pointer-events: none;
+}
+
+.accMap .pin img{
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  display: block !important;
+
+  filter: contrast(1.06) saturate(1.05);
+  transform: translateZ(0);
+}
+
+.accMap .pin:focus{
+  outline: 2px solid rgba(122,90,69,0.42);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   Tooltip (clean + tight)
+   ========================================================= */
+
+.accMap .pinTip{
+  position:absolute;
+  left:0; top:0;
+  pointer-events:none;
+  z-index: 40;
+}
+
+.accMap .pinTip__inner{
+  min-width: 170px;
+  max-width: 260px;
+
+  border-radius: 14px;
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.94);
+
+  box-shadow: 0 18px 38px rgba(40,32,24,0.18);
+  padding: 9px 11px;
+
+  opacity: 0;
+  transition: opacity 120ms ease;
+  position: relative;
+}
+
+.accMap .pinTip__inner:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-7px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(255,255,255,0.94);
+  border-right: 1px solid rgba(40,32,24,0.14);
+  border-bottom: 1px solid rgba(40,32,24,0.14);
+}
+
+.accMap .pinTip.open .pinTip__inner{ opacity: 1; }
+
+.accMap .pinTip__name{
+  font-family: var(--serif);
+  font-weight: 900;
+  color: rgba(70,50,36,0.92);
+  line-height: 1.1;
+}
+
+.accMap .pinTip__meta{
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(40,32,24,0.72);
+  line-height: 1.25;
+}
+
+/* =========================================================
+   City pills (tighter)
+   ========================================================= */
+
+.cityRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cityPill{
+  border: 1px solid rgba(40,32,24,0.14);
+  background: rgba(255,255,255,0.52);
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12.5px;
+  color: rgba(70,50,36,0.90);
+}
+
+/* =========================================================
+   Safety: prevent any map images from blowing up layout
+   ========================================================= */
+
+#mapAccordion img{
+  max-width: 100%;
 }
