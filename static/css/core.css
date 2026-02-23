@@ -1,0 +1,129 @@
+/* core.css
+   Global theme tokens + base parchment + texture overlay
+*/
+
+/* =========================================================
+   Theme tokens (MOBILE FIRST)
+   ========================================================= */
+:root{
+  color-scheme: light;
+
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --serif: "Palatino Linotype","Book Antiqua",Palatino,"Iowan Old Style","Garamond","Georgia","Times New Roman",serif;
+
+  /* Paper + ink (warmer, calmer, more romantic parchment) */
+  --bg:   #EDE2D6;   /* base parchment */
+  --ink:  rgba(44, 30, 18, 0.92);
+  --ink-2:rgba(44, 30, 18, 0.72);
+  --line: rgba(44, 30, 18, 0.14);
+
+  /* Navbar */
+  --nav-bg: rgba(242, 232, 214, 0.86);
+  --nav-border: rgba(90, 60, 40, 0.18);
+  --nav-hover: rgba(255,255,255,.35);
+
+  /* Cards */
+  --card-bg-a: rgba(255,255,255,0.52);
+  --card-bg-b: rgba(255,255,255,0.22);
+  --card-border: rgba(90, 60, 40, .20);
+
+  /* Layout sizing (mobile-first) */
+  --page-pad: 12px;
+  --content-max: 1120px;
+
+  /* Type */
+  --brand-font: clamp(18px, 5.1vw, 22px);
+  --hero-font: clamp(22px, 7.2vw, 30px);
+  --sub-font:  clamp(14px, 3.5vw, 17px);
+
+  /* Buttons */
+  --btn-font: 13.5px;
+  --btn-pad-y: 8px;
+  --btn-pad-x: 12px;
+
+  /* Tree (SVG) */
+  --tree-link: rgba(64, 52, 38, 0.42);
+  --tree-union-dot: rgba(64, 52, 38, 0.25);
+  --tree-card-bg: rgba(255,255,255,0.72);
+  --tree-card-stroke: rgba(64, 52, 38, 0.16);
+  --tree-photo-ph: rgba(64, 52, 38, 0.08);
+  --tree-photo-ring: rgba(64, 52, 38, 0.18);
+  --tree-text-strong: rgba(40, 32, 24, 0.92);
+  --tree-text-soft: rgba(40, 32, 24, 0.70);
+}
+
+/* =========================================================
+   Base / parchment
+   ========================================================= */
+*{ box-sizing: border-box; }
+
+html, body{
+  height: 100%;
+  background-color: var(--bg);
+}
+
+body{
+  margin:0;
+  font-family: var(--serif);
+  color: var(--ink);
+
+  background-color: var(--bg);
+
+  position: relative;
+  isolation: isolate;
+}
+
+a{ color: inherit; }
+img{ max-width:100%; height:auto; display:block; }
+
+/* Paper texture overlay (IMPORTANT: behind content) */
+body::after{
+  content:"";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+
+  background-image: url("../img/paper-texture-light.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0.10;
+  mix-blend-mode: multiply;
+  filter: contrast(1.00);
+}
+
+/* =========================================================
+   Responsive root token tweaks (shared)
+   ========================================================= */
+
+/* tablet */
+@media (min-width: 760px){
+  :root{ --page-pad: 18px; }
+}
+
+/* slightly wider phones */
+@media (min-width: 480px){
+  :root{
+    --page-pad: 14px;
+    --btn-font: 14px;
+    --btn-pad-y: 9px;
+    --btn-pad-x: 14px;
+  }
+}
+
+/* ultra small */
+@media (max-width: 360px){
+  :root{
+    --page-pad: 10px;
+    --btn-font: 12.5px;
+    --btn-pad-y: 7px;
+    --btn-pad-x: 10px;
+  }
+}
+
+/* desktop: widen padding */
+@media (min-width: 900px){
+  :root{ --page-pad: 22px; }
+}

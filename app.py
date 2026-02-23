@@ -1,50 +1,86 @@
 from __future__ import annotations
 
-################################################################
-# RENDER HOSTING
-#   - Persistent disk directory (Render sets DATA_DIR)
-#---------------------------------------------------------------
-import os
+"""
+LineAgeMap — app.py (cleaned + hardened)
 
-DATA_DIR = os.environ.get("DATA_DIR", "data")
-os.makedirs(DATA_DIR, exist_ok=True)
-################################################################
+- Session-based auth (session["user_id"])
+- Persistent storage under DATA_DIR (Render sets DATA_DIR)
+- Built-in sample datasets (includes stark)
+- Not-logged-in behavior:
+    • Tree / Timeline / Map templates should use /api/sample/stark/tree
+    • /api/tree/me fallback returns stark sample
+    • Landing previews use stark sample
+- Normalizes sample/user JSON into a stable schema:
+    { "people": [...], "relationships": [...] }
+  including relationship key normalization to parentId/childId.
+"""
 
 import json
+import os
+import shutil
 import sqlite3
 import uuid
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from flask import Flask, jsonify, render_template, request, session, abort, redirect, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# -----------------------------
+# PATHS / STORAGE (Render)
+# -----------------------------
 APP_DIR = Path(__file__).parent
 
-# Convert DATA_DIR (string) to a Path and make it absolute relative to the app folder if needed
-DATA_DIR = Path(DATA_DIR)
+# Render will set DATA_DIR to a persistent disk mount (e.g., /var/data)
+DATA_DIR_ENV = os.environ.get("DATA_DIR", "data")
+DATA_DIR = Path(DATA_DIR_ENV)
 if not DATA_DIR.is_absolute():
     DATA_DIR = APP_DIR / DATA_DIR
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Session secret (set LINEAGEMAP_SECRET in production)
+SECRET = os.environ.get("LINEAGEMAP_SECRET", "dev-secret-change-me")
+
+# Default demo dataset when not logged in (previews + fallback)
+DEFAULT_SAMPLE_ID = "stark"
+
+# Allow-list for /api/sample/<sample_id>/tree
+ALLOWED_SAMPLES = {"stark", "got", "gupta", "kennedy"}
 
 app = Flask(
     __name__,
     template_folder=str(APP_DIR / "templates"),
     static_folder=str(APP_DIR / "static"),
 )
-
-# Session secret (set LINEAGEMAP_SECRET in production)
-app.secret_key = os.environ.get("LINEAGEMAP_SECRET", "dev-secret-change-me")
+app.secret_key = SECRET
 
 
-#####################
-# AUTH + USER STATE
-#####################
+# -----------------------------
+# SMALL HELPERS (type-safe)
+# -----------------------------
+def require_lastrowid(cur: sqlite3.Cursor) -> int:
+    rid = cur.lastrowid
+    if rid is None:
+        raise RuntimeError("Insert failed: lastrowid is None")
+    return int(rid)
 
 
+def get_session_uid() -> int | None:
+    raw = session.get("user_id")
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, str) and raw.isdigit():
+        return int(raw)
+    return None
+
+
+# -----------------------------
+# DB (Users)
+# -----------------------------
 def users_db_path() -> Path:
-    return Path(DATA_DIR) / "users.db"
+    return DATA_DIR / "users.db"
 
 
 def db_connect() -> sqlite3.Connection:
@@ -69,6 +105,7 @@ def db_init() -> None:
             )
             """
         )
+
         # Lightweight migrations for existing DBs.
         cols = [r["name"] for r in con.execute("PRAGMA table_info(users)").fetchall()]
         if "family_file" not in cols:
@@ -77,26 +114,214 @@ def db_init() -> None:
             con.execute("ALTER TABLE users ADD COLUMN public_slug TEXT NOT NULL DEFAULT ''")
         if "is_public" not in cols:
             con.execute("ALTER TABLE users ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0")
+        if "state_json" not in cols:
+            con.execute("ALTER TABLE users ADD COLUMN state_json TEXT NOT NULL DEFAULT '{}'")
+
         con.commit()
 
 
+@app.before_request
+def _ensure_db() -> None:
+    db_init()
+
+
+# -----------------------------
+# FILES (Families)
+# -----------------------------
 def families_dir() -> Path:
-    d = Path(DATA_DIR) / "families"
+    d = DATA_DIR / "families"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def user_family_file(uid: int) -> Path:
-    # Each user owns a deterministic file.
-    # Stored under the persistent DATA_DIR so it survives deploys.
     d = families_dir() / str(uid)
     d.mkdir(parents=True, exist_ok=True)
     return d / "family.json"
 
 
+def _safe_family_name(name: str) -> str:
+    return "".join(c for c in (name or "").lower() if c.isalnum() or c in ("-", "_"))
+
+
+def family_path(name: str) -> Path:
+    """
+    Preferred convention:
+        DATA_DIR/family_<name>.json
+    Also supports:
+        DATA_DIR/<name>.json
+    """
+    safe = _safe_family_name(name)
+
+    p1 = DATA_DIR / f"family_{safe}.json"
+    if p1.exists():
+        return p1
+
+    p2 = DATA_DIR / f"{safe}.json"
+    if p2.exists():
+        return p2
+
+    return p1
+
+
+def _normalize_relationships(rels: Any) -> list[dict]:
+    """
+    Normalize relationship records into a consistent parentId/childId shape.
+
+    Supports common variants:
+      - {source, target}
+      - {sourceId, targetId}
+      - {parent, child}
+      - {parentId, childId}
+    """
+    if not isinstance(rels, list):
+        return []
+
+    out: list[dict] = []
+    for r in rels:
+        if not isinstance(r, dict):
+            continue
+
+        parent = (
+            r.get("parentId")
+            or r.get("parent")
+            or r.get("sourceId")
+            or r.get("source")
+        )
+        child = (
+            r.get("childId")
+            or r.get("child")
+            or r.get("targetId")
+            or r.get("target")
+        )
+
+        if parent is None or child is None:
+            continue
+
+        nr = dict(r)
+        nr["parentId"] = str(parent)
+        nr["childId"] = str(child)
+        out.append(nr)
+
+    return out
+
+
+def load_family_file(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {"people": [], "relationships": []}
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+
+    # Normalize older/alternate schemas
+    if "people" not in data and "nodes" in data:
+        data["people"] = data.get("nodes") or []
+    if "relationships" not in data and "links" in data:
+        data["relationships"] = data.get("links") or []
+
+    # Ensure correct types
+    if not isinstance(data.get("people"), list):
+        data["people"] = []
+    data["relationships"] = _normalize_relationships(data.get("relationships"))
+
+    return data
+
+
+def load_user_family(uid: int) -> Dict[str, Any]:
+    path = user_family_file(uid)
+    if path.exists():
+        return load_family_file(path)
+    # If user family missing, fall back to default sample
+    return load_sample_tree(DEFAULT_SAMPLE_ID)
+
+
+# -----------------------------
+# SAMPLES (built-in demo datasets)
+# -----------------------------
+def samples_disk_dir() -> Path:
+    d = DATA_DIR / "samples"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def samples_repo_dir() -> Path:
+    # Canonical "shipped" samples in repo (copied to disk on first boot)
+    return APP_DIR / "samples"
+
+
+def seed_samples_if_missing() -> None:
+    """
+    Render persistent disk starts empty.
+    Keep canonical samples in repo ./samples/*.json
+    Copy missing ones to DATA_DIR/samples on boot.
+    """
+    repo = samples_repo_dir()
+    if not repo.exists():
+        return
+
+    target = samples_disk_dir()
+    for src in repo.glob("*.json"):
+        dst = target / src.name
+        if not dst.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+
+
+def _sample_paths(sample_id: str) -> list[Path]:
+    fname = sample_id if sample_id.endswith(".json") else f"{sample_id}.json"
+    # prefer persistent disk first
+    return [
+        samples_disk_dir() / fname,
+        # dev/legacy fallbacks
+        samples_repo_dir() / fname,
+        APP_DIR / "static" / "samples" / fname,
+        APP_DIR / "static" / "data" / fname,
+        APP_DIR / "data" / "samples" / fname,
+    ]
+
+
+def _load_sample_json(sample_id: str) -> dict:
+    for p in _sample_paths(sample_id):
+        if p.exists():
+            with p.open("r", encoding="utf-8") as f:
+                return json.load(f)
+    abort(
+        404,
+        description=(
+            f"Sample '{sample_id}' not found. Looked in: "
+            + ", ".join(str(p) for p in _sample_paths(sample_id))
+        ),
+    )
+
+
+def _normalize_tree(payload: dict) -> dict:
+    """
+    Ensure output is exactly:
+      { "people": [...], "relationships": [...] }
+    Also supports common alternate keys.
+    """
+    people = payload.get("people") or payload.get("persons") or payload.get("nodes") or []
+    rels = payload.get("relationships") or payload.get("edges") or payload.get("links") or []
+    return {"people": people if isinstance(people, list) else [], "relationships": _normalize_relationships(rels)}
+
+
+def load_sample_tree(sample_id: str) -> Dict[str, Any]:
+    raw = _load_sample_json(sample_id)
+    tree = _normalize_tree(raw)
+    if not tree["people"]:
+        abort(500, description=f"Sample '{sample_id}' loaded but produced 0 people. Check JSON schema/keys.")
+    return tree
+
+
+# Seed samples once on import (safe + fast)
+seed_samples_if_missing()
+
+
+# -----------------------------
+# PUBLIC SLUGS
+# -----------------------------
 def slugify(s: str) -> str:
     s = (s or "").strip().lower()
-    out = []
+    out: list[str] = []
     for c in s:
         if c.isalnum():
             out.append(c)
@@ -122,25 +347,46 @@ def unique_public_slug(con: sqlite3.Connection, base: str) -> str:
         i += 1
 
 
-def get_current_user() -> dict | None:
-    uid = session.get("user_id")
-    if not uid:
+def load_public_family_by_slug(slug: str) -> Optional[Dict[str, Any]]:
+    safe_slug = slugify(slug)
+    with db_connect() as con:
+        row = con.execute(
+            "SELECT id, is_public FROM users WHERE public_slug = ?",
+            (safe_slug,),
+        ).fetchone()
+
+    if not row:
         return None
+    if int(row["is_public"]) != 1:
+        return None
+    return load_user_family(int(row["id"]))
+
+
+# -----------------------------
+# CURRENT USER
+# -----------------------------
+def get_current_user() -> Optional[dict]:
+    uid = get_session_uid()
+    if uid is None:
+        return None
+
     with db_connect() as con:
         row = con.execute(
             "SELECT id, email, family_file, public_slug, is_public, state_json FROM users WHERE id = ?",
             (uid,),
         ).fetchone()
+
     if not row:
         session.pop("user_id", None)
         return None
-    state = {}
+
     try:
         state = json.loads(row["state_json"] or "{}")
     except Exception:
         state = {}
+
     return {
-        "id": row["id"],
+        "id": int(row["id"]),
         "email": row["email"],
         "family_file": row["family_file"],
         "public_slug": row["public_slug"],
@@ -158,45 +404,15 @@ def set_user_state(uid: int, state: dict) -> None:
         con.commit()
 
 
-def family_path(name: str) -> Path:
-    safe = "".join(c for c in name.lower() if c.isalnum() or c in ("-", "_"))
-    return Path(DATA_DIR) / f"family_{safe}.json"
+@app.context_processor
+def inject_current_user() -> dict:
+    return {"current_user": get_current_user()}
 
 
-def load_user_family(uid: int) -> Dict[str, Any]:
-    # If the user's file doesn't exist yet, fall back to GOT.
-    path = user_family_file(uid)
-    if path.exists():
-        return load_family_file(path)
-    return load_family_file(family_path("got"))
-
-
-def load_public_family_by_slug(slug: str) -> Dict[str, Any] | None:
-    db_init()
-    with db_connect() as con:
-        row = con.execute(
-            "SELECT id, is_public FROM users WHERE public_slug = ?",
-            (slugify(slug),),
-        ).fetchone()
-    if not row:
-        return None
-    if int(row["is_public"]) != 1:
-        return None
-    return load_user_family(int(row["id"]))
-
-
-def load_family_file(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {"people": [], "relationships": []}
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
+# -----------------------------
+# STARTER DATASET FOR NEW USERS
+# -----------------------------
 def starter_family_payload() -> Dict[str, Any]:
-    """Create a minimal starter dataset for brand-new accounts.
-
-    Two placeholder people, no relationships, blank names/photos.
-    Frontend should render blanks using fallbacks (e.g., "Unnamed", placeholder avatar).
-    """
     p1 = f"p_{uuid.uuid4().hex[:6]}"
     p2 = f"p_{uuid.uuid4().hex[:6]}"
     return {
@@ -229,13 +445,10 @@ def starter_family_payload() -> Dict[str, Any]:
     }
 
 
-#####################
-# AUTH HELPERS (GUI)
-#####################
-
-
-def authenticate_user(email: str, password: str) -> dict | None:
-    db_init()
+# -----------------------------
+# AUTH HELPERS
+# -----------------------------
+def authenticate_user(email: str, password: str) -> Optional[dict]:
     email = (email or "").strip().lower()
     if not email or not password:
         return None
@@ -250,11 +463,11 @@ def authenticate_user(email: str, password: str) -> dict | None:
         return None
     if not check_password_hash(row["password_hash"], password):
         return None
+
     return {"id": int(row["id"]), "email": row["email"]}
 
 
 def create_user(email: str, password: str) -> int:
-    db_init()
     email = (email or "").strip().lower()
     password = password or ""
 
@@ -275,7 +488,7 @@ def create_user(email: str, password: str) -> int:
                 "INSERT INTO users (email, password_hash, public_slug, state_json) VALUES (?, ?, ?, ?)",
                 (email, pw_hash, pub_slug, json.dumps(default_state)),
             )
-            uid = int(cur.lastrowid)
+            uid = require_lastrowid(cur)
 
             dst = user_family_file(uid)
             if not dst.exists():
@@ -290,53 +503,43 @@ def create_user(email: str, password: str) -> int:
         raise ValueError("That email is already registered.")
 
 
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if get_session_uid() is None:
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+# -----------------------------
+# PAGES
+# -----------------------------
 @app.get("/")
 def index():
-    # Home / Landing page
-    db_init()
+    fam = load_sample_tree(DEFAULT_SAMPLE_ID)
 
-    # Landing previews use GOT as the demo data.
-    got = load_family_file(family_path("got"))
+    people = fam.get("people") or []
+    rels = fam.get("relationships") or []
 
-    # Tree preview (Eddard + Catelyn and their children)
-    people_by_id = {str(p.get("id")): p for p in (got.get("people") or [])}
-    rels = got.get("relationships") or []
-    parents = ["eddard", "catelyn"]
-
-    parents_children: dict[str, set[str]] = {pid: set() for pid in parents}
+    # roots = people with no incoming child links
+    child_ids = set()
     for r in rels:
-        parent = r.get("parentId") or r.get("parent") or r.get("sourceId") or r.get("source")
-        child = r.get("childId") or r.get("child") or r.get("targetId") or r.get("target")
-        if not parent or not child:
-            continue
-        parent = str(parent)
-        child = str(child)
-        if parent in parents_children:
-            parents_children[parent].add(child)
+        child = r.get("childId")
+        if child:
+            child_ids.add(str(child))
 
-    common_children = sorted(list(parents_children.get("eddard", set()) & parents_children.get("catelyn", set())))
-    # Keep preview tight
-    common_children = common_children[:8]
+    roots = [p for p in people if str(p.get("id")) not in child_ids]
+    roots = roots[:2] if roots else people[:2]
+    tree_preview = {"parents": roots, "children": []}
 
-    tree_preview = {
-        "parents": [people_by_id.get(pid) for pid in parents if pid in people_by_id],
-        "children": [people_by_id.get(cid) for cid in common_children if cid in people_by_id],
-    }
-
-    # Timeline preview (pick a handful of people with photos)
-    timeline_people = [p for p in (got.get("people") or []) if p.get("photo")]
-
-    # Prefer Starks first, then fall back.
-    def is_stark(p: dict) -> int:
-        return 0 if "stark" in str(p.get("name", "")).lower() else 1
-
-    timeline_people.sort(key=lambda p: (is_stark(p), str(p.get("name", ""))))
+    timeline_people = [p for p in people if p.get("photo")]
+    timeline_people.sort(key=lambda p: str(p.get("name", "")))
     timeline_preview = timeline_people[:5]
 
-    user = get_current_user()
     return render_template(
         "index.html",
-        current_user=user,
         tree_preview=tree_preview,
         timeline_preview=timeline_preview,
     )
@@ -344,50 +547,41 @@ def index():
 
 @app.get("/f/<slug>")
 def public_family(slug: str):
-    """Public, shareable family page.
-
-    Keeps the same look/feel as the app, but loads data from the owner's
-    per-user family.json via /api/public/<slug>/tree.
-    """
-    db_init()
-    safe_slug = slugify(slug)
-    fam = load_public_family_by_slug(safe_slug)
+    fam = load_public_family_by_slug(slug)
     if fam is None:
         abort(404)
 
-    # Lightweight previews (reuse home visuals)
     people = fam.get("people") or []
     rels = fam.get("relationships") or []
 
     child_ids = set()
     for r in rels:
-        child = r.get("childId") or r.get("child") or r.get("targetId") or r.get("target")
+        child = r.get("childId")
         if child:
             child_ids.add(str(child))
+
     roots = [p for p in people if str(p.get("id")) not in child_ids]
     roots = roots[:2] if roots else people[:2]
     tree_preview = {"parents": roots, "children": []}
 
-    timeline_people = [p for p in people if p.get("photo")][:5]
+    timeline_people = [p for p in people if p.get("photo")]
+    timeline_preview = timeline_people[:5]
 
     return render_template(
         "public_family.html",
-        current_user=get_current_user(),
-        public_slug=safe_slug,
+        public_slug=slugify(slug),
         family_name=(fam.get("meta") or {}).get("family_name") or "Family",
         tree_preview=tree_preview,
-        timeline_preview=timeline_people,
+        timeline_preview=timeline_preview,
     )
 
 
 @app.get("/tree")
 def tree_view():
     public_slug = request.args.get("public")
-    sample_id = request.args.get("sample")
-    sample_id = (sample_id or "").strip().lower() or None
+    sample_id = (request.args.get("sample") or "").strip().lower() or None
     return render_template(
         "tree.html",
-        current_user=get_current_user(),
         public_slug=slugify(public_slug) if public_slug else None,
         sample_id=sample_id,
     )
@@ -396,11 +590,9 @@ def tree_view():
 @app.get("/timeline")
 def timeline_view():
     public_slug = request.args.get("public")
-    sample_id = request.args.get("sample")
-    sample_id = (sample_id or "").strip().lower() or None
+    sample_id = (request.args.get("sample") or "").strip().lower() or None
     return render_template(
         "timeline.html",
-        current_user=get_current_user(),
         public_slug=slugify(public_slug) if public_slug else None,
         sample_id=sample_id,
     )
@@ -409,26 +601,20 @@ def timeline_view():
 @app.get("/map")
 def map_view():
     public_slug = request.args.get("public")
-    sample_id = request.args.get("sample")
-    sample_id = (sample_id or "").strip().lower() or None
+    sample_id = (request.args.get("sample") or "").strip().lower() or None
     return render_template(
         "map.html",
-        current_user=get_current_user(),
         public_slug=slugify(public_slug) if public_slug else None,
         sample_id=sample_id,
     )
 
 
-
-
-#####################
+# -----------------------------
 # AUTH PAGES
-#####################
-
-
+# -----------------------------
 @app.get("/login")
 def login():
-    return render_template("login.html", error=None, current_user=get_current_user())
+    return render_template("login.html", error=None)
 
 
 @app.post("/login")
@@ -438,25 +624,28 @@ def login_post():
 
     user = authenticate_user(email, password)
     if not user:
-        return render_template("login.html", error="Invalid email or password.", current_user=get_current_user())
+        return render_template("login.html", error="Invalid email or password.")
 
     session["user_id"] = user["id"]
-    return redirect(url_for("tree_view"))
+
+    next_url = request.args.get("next") or request.form.get("next")
+    return redirect(next_url or url_for("tree_view"))
 
 
 @app.get("/register")
 def register():
-    return render_template("register.html", error=None, current_user=get_current_user())
+    return render_template("register.html", error=None)
 
 
 @app.post("/register")
 def register_post():
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
+
     try:
         uid = create_user(email, password)
     except ValueError as e:
-        return render_template("register.html", error=str(e), current_user=get_current_user())
+        return render_template("register.html", error=str(e))
 
     session["user_id"] = uid
     return redirect(url_for("tree_view"))
@@ -465,17 +654,15 @@ def register_post():
 @app.get("/logout")
 def logout():
     session.pop("user_id", None)
-    return redirect(url_for("index"))
+    next_url = request.args.get("next")
+    return redirect(next_url or url_for("index"))
 
 
-#####################
+# -----------------------------
 # AUTH API
-#####################
-
-
+# -----------------------------
 @app.post("/api/register")
 def api_register():
-    db_init()
     payload = request.get_json(silent=True) or {}
     email = str(payload.get("email", "")).strip().lower()
     password = str(payload.get("password", ""))
@@ -485,39 +672,19 @@ def api_register():
     if not password or len(password) < 8:
         return jsonify({"ok": False, "error": "Password must be at least 8 characters."}), 400
 
-    pw_hash = generate_password_hash(password)
-    # In "real" mode, logged-in views should load from the user's owned family.json
-    default_state = {"family_id": "me"}
-
     try:
-        with db_connect() as con:
-            base_slug = email.split("@", 1)[0]
-            pub_slug = unique_public_slug(con, base_slug)
-
-            cur = con.execute(
-                "INSERT INTO users (email, password_hash, public_slug, state_json) VALUES (?, ?, ?, ?)",
-                (email, pw_hash, pub_slug, json.dumps(default_state)),
-            )
-            uid = int(cur.lastrowid)
-
-            # Create per-user family.json with a minimal starter dataset (2 blank nodes).
-            dst = user_family_file(uid)
-            if not dst.exists():
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                dst.write_text(json.dumps(starter_family_payload(), indent=2), encoding="utf-8")
-
-            con.execute("UPDATE users SET family_file = ? WHERE id = ?", (str(dst), uid))
-            con.commit()
-    except sqlite3.IntegrityError:
-        return jsonify({"ok": False, "error": "That email is already registered."}), 409
+        uid = create_user(email, password)
+    except ValueError as e:
+        msg = str(e)
+        code = 409 if "already registered" in msg.lower() else 400
+        return jsonify({"ok": False, "error": msg}), code
 
     session["user_id"] = uid
-    return jsonify({"ok": True, "email": email, "state": default_state})
+    return jsonify({"ok": True, "email": email, "state": {"family_id": "me"}})
 
 
 @app.post("/api/login")
 def api_login():
-    db_init()
     payload = request.get_json(silent=True) or {}
     email = str(payload.get("email", "")).strip().lower()
     password = str(payload.get("password", ""))
@@ -535,11 +702,11 @@ def api_login():
         return jsonify({"ok": False, "error": "Invalid email or password."}), 401
 
     session["user_id"] = int(row["id"])
-    state = {}
     try:
         state = json.loads(row["state_json"] or "{}")
     except Exception:
         state = {}
+
     return jsonify({"ok": True, "email": row["email"], "state": state})
 
 
@@ -570,11 +737,14 @@ def api_me_public_toggle():
     user = get_current_user()
     if not user:
         return jsonify({"ok": False, "error": "Not authenticated."}), 401
+
     payload = request.get_json(silent=True) or {}
     is_public = 1 if bool(payload.get("is_public")) else 0
+
     with db_connect() as con:
         con.execute("UPDATE users SET is_public = ? WHERE id = ?", (is_public, int(user["id"])))
         con.commit()
+
     return jsonify({"ok": True, "is_public": bool(is_public), "public_slug": user.get("public_slug", "")})
 
 
@@ -583,17 +753,21 @@ def api_me_state():
     user = get_current_user()
     if not user:
         return jsonify({"ok": False, "error": "Not authenticated."}), 401
+
     payload = request.get_json(silent=True) or {}
     state = dict(user.get("state", {}))
-    # For now we only persist the preferred family_id.
+
     fam = payload.get("family_id")
     if fam:
         state["family_id"] = str(fam)
+
     set_user_state(int(user["id"]), state)
     return jsonify({"ok": True, "state": state})
 
 
-# Tree data endpoint (read-only)
+# -----------------------------
+# TREE DATA API
+# -----------------------------
 @app.get("/api/tree/<name>")
 def api_tree(name: str):
     path = family_path(name)
@@ -604,14 +778,16 @@ def api_tree(name: str):
 
 @app.get("/api/tree/me")
 def api_tree_me():
-    uid = session.get("user_id")
-    if uid:
+    uid = get_session_uid()
+
+    if uid is not None:
         path = user_family_file(uid)
         if path.exists():
-            return jsonify(json.loads(path.read_text(encoding="utf-8")))
-    # fallback if not logged in or missing file
-    demo = family_path("got")
-    return jsonify(json.loads(demo.read_text(encoding="utf-8")))
+            return jsonify(load_family_file(path))
+
+    # Not logged in or missing file -> default sample dataset (from samples store)
+    return jsonify(load_sample_tree(DEFAULT_SAMPLE_ID))
+
 
 @app.get("/api/public/<slug>/tree")
 def api_public_tree(slug: str):
@@ -623,17 +799,15 @@ def api_public_tree(slug: str):
 
 @app.get("/api/sample/<sample_id>/tree")
 def api_sample_tree(sample_id: str):
-    """Public: return a built-in sample dataset."""
-    allowed = {"got", "gupta", "kennedy"}
-    sid = (sample_id or "").strip().lower()
-    if sid not in allowed:
-        return jsonify({"ok": False, "error": "Unknown sample."}), 404
-    path = family_path(sid)
-    return jsonify(load_family_file(path))
+    sample_id = (sample_id or "").strip().lower()
+    if sample_id not in ALLOWED_SAMPLES:
+        abort(404, description="Sample not found.")
+
+    return jsonify(load_sample_tree(sample_id))
 
 
-#####################
+# -----------------------------
 # LOCAL RUN
-#####################
+# -----------------------------
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)

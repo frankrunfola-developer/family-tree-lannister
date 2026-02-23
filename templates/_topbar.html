@@ -4,31 +4,65 @@
     <!-- Left: brand -->
     <div class="topbar-left">
       <a class="brandIcon" href="{{ url_for('index') }}" aria-label="LineAgeMap Home">
-        <img class="brandMark" src="{{ url_for('static', filename='img/lam.png') }}" alt="LineAgeMap" />
+        <img class="brandMark" src="{{ url_for('static', filename='img/lineagemap_logo.png') }}" alt="LineAgeMap" />
       </a>
       <a class="brandTitle" href="{{ url_for('index') }}">LineAgeMap</a>
     </div>
 
-    <!-- Center: nav links -->
+    <!-- Center: desktop nav links only -->
     <nav class="topbar-links" aria-label="Primary">
-      <a href="{{ url_for('tree_view', family='me') }}" class="{% if active_page=='tree' %}is-active{% endif %}">Tree</a>
-      <a href="{{ url_for('timeline_view', family='me') }}" class="{% if active_page=='timeline' %}is-active{% endif %}">Timeline</a>
-      <a href="{{ url_for('map_view', family='me') }}" class="{% if active_page=='map' %}is-active{% endif %}">Map</a>
+      <a href="{{ url_for('tree_view') }}" class="{% if active_page=='tree' %}is-active{% endif %}">Tree</a>
+      <a href="{{ url_for('timeline_view') }}" class="{% if active_page=='timeline' %}is-active{% endif %}">Timeline</a>
+      <a href="{{ url_for('map_view') }}" class="{% if active_page=='map' %}is-active{% endif %}">Map</a>
     </nav>
 
-    <!-- Right: auth actions -->
+    <!-- Right: hamburger + auth actions -->
     <div class="topbar-right">
-      {% if session.get('user_email') %}
-        <div class="userBadge" title="{{ session.get('user_email') }}">
+
+      <!-- Mobile hamburger -->
+      <button
+        id="navbtn"
+        class="navToggle"
+        type="button"
+        aria-label="Open menu"
+        aria-controls="navpanel"
+        aria-expanded="false"
+      >
+        <span class="navToggleIcon" aria-hidden="true"></span>
+      </button>
+
+      {% if current_user %}
+        <div class="userBadge" title="{{ current_user.email }}">
           <span class="dot" aria-hidden="true"></span>
-          <span class="email">{{ session.get('user_email') }}</span>
-          <a class="logoutLink" href="{{ url_for('logout') }}">Log out</a>
+          <span class="email">{{ current_user.email }}</span>
+          <a
+            class="logoutLink"
+            href="{{ url_for('logout') }}"
+            onclick="return confirm('Are you sure you want to log out?');"
+          >Log out</a>
         </div>
       {% else %}
-        <a class="btn ghost" href="{{ url_for('login') }}">Log In</a>
+        <a class="btn ghost desktopOnly" href="{{ url_for('login') }}">Log In</a>
         <a class="btn primary" href="{{ url_for('register') }}">Get Started</a>
       {% endif %}
     </div>
 
   </div>
+
+  <!-- Mobile dropdown panel -->
+  <nav id="navpanel" class="mobileNav" aria-label="Mobile">
+    <a href="{{ url_for('tree_view') }}" class="{% if active_page=='tree' %}is-active{% endif %}">Tree</a>
+    <a href="{{ url_for('timeline_view') }}" class="{% if active_page=='timeline' %}is-active{% endif %}">Timeline</a>
+    <a href="{{ url_for('map_view') }}" class="{% if active_page=='map' %}is-active{% endif %}">Map</a>
+
+    {% if not current_user %}
+      <a href="{{ url_for('login') }}">Log In</a>
+      <a href="{{ url_for('register') }}">Get Started</a>
+    {% else %}
+      <a
+        href="{{ url_for('logout') }}"
+        onclick="return confirm('Are you sure you want to log out?');"
+      >Log out</a>
+    {% endif %}
+  </nav>
 </header>

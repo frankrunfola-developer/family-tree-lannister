@@ -1,10 +1,13 @@
 /* Map accordion: Country -> State/Province -> City
    Renders face-only pins and shows an info bubble on hover/tap.
-   Data source: /api/tree/<family>
+   Data source: /api/public/<slug>/tree OR /api/sample/<id>/tree OR /api/tree/<family>
 */
 (function () {
-  var FAMILY_NAME = (window.MAP_FAMILY_ID || 'gupta');
+  // Prefer explicit API URL (public/sample/me). If absent, fall back to family id route.
   var API_URL = window.MAP_API_URL || null;
+
+  // If we must fall back to /api/tree/<family>, default to the Stark demo dataset when not logged in.
+  var FAMILY_NAME = (window.MAP_FAMILY_ID || 'stark');
 
   function isDesktop() {
     return window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
@@ -413,7 +416,8 @@
   }
 
   function boot() {
-    var root = document.getElementById('mapAccRoot');
+    // Your template uses id="mapAccordion". Keep backward compatibility if you ever used "mapAccRoot".
+    var root = document.getElementById('mapAccordion') || document.getElementById('mapAccRoot');
     if (!root) return;
 
     var url = API_URL ? API_URL : ('/api/tree/' + encodeURIComponent(FAMILY_NAME));

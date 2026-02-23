@@ -543,7 +543,7 @@ function wireFitUI(svg, panZoomApi) {
   });
 }
 
-export async function initTree(treeName = "got") {
+export async function initTree(treeName = "stark") {
   const svg = document.querySelector("#treeSvg");
   if (!svg) throw new Error("Missing #treeSvg element");
 
@@ -601,6 +601,6 @@ export async function initTree(treeName = "got") {
 document.addEventListener("DOMContentLoaded", () => {
   const svg = document.querySelector("#treeSvg");
   if (!svg) return;
-  const fam = (window.TREE_FAMILY_ID || "got");
+  const fam = (window.TREE_FAMILY_ID || "stark");
   initTree(String(fam).toLowerCase()).catch((e) => console.error(e));
 });

@@ -1,0 +1,177 @@
+/* landing.css
+   Marketing homepage (hero + preview cards + trust)
+*/
+
+main.landing{
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 6px var(--page-pad) 18px; /* tighter top + bottom */
+  position: relative;
+  z-index: 2; /* above texture */
+}
+
+.hero{
+  text-align: center;
+  padding: 0;
+}
+.hero-logo{
+  display: block; /* removes inline image baseline gap */
+  width: min(320px, 50%);
+  height: auto;
+  margin: 0 auto 6px; /* tighter */
+  filter: drop-shadow(0 10px 16px rgba(20, 12, 6, 0.10));
+}
+.hero-title{
+  margin: 8px auto 8px;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: var(--hero-font);
+  line-height: 1.04;
+  letter-spacing: .10px;
+  color: rgba(80,54,38,.94);
+  text-shadow:
+    0 2px 0 rgba(255,255,255,.50),
+    0 10px 20px rgba(60,40,25,.14);
+}
+.hero-subtitle{
+  margin: 0 auto;
+  max-width: 62ch;
+  font-size: var(--sub-font);
+  line-height: 1.5;
+  color: rgba(43, 30, 20, .84);
+}
+
+/* ✅ Cards grid (mobile = 1 col) */
+.previews{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* card */
+.preview-card{
+  background: linear-gradient(180deg, var(--card-bg-a), var(--card-bg-b));
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 12px 26px rgba(0,0,0,.10),
+    inset 0 1px 10px rgba(255,255,255,.55);
+  display:flex;
+  flex-direction: column;
+}
+
+/* subtle edge wear only on cards */
+.preview-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(70% 55% at 12% 12%, rgba(0,0,0,.06), transparent 58%),
+    radial-gradient(70% 55% at 88% 16%, rgba(0,0,0,.05), transparent 62%),
+    radial-gradient(70% 55% at 14% 90%, rgba(0,0,0,.05), transparent 62%),
+    radial-gradient(70% 55% at 90% 92%, rgba(0,0,0,.05), transparent 62%);
+  opacity: .22;
+}
+
+.preview-title{
+  font-family: var(--serif);
+  text-align:left;
+  margin: 2px 2px 10px;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(70,46,32,.92);
+}
+
+/* stable preview window */
+.preview-body{
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 185px;
+  border-radius: 12px;
+  border: 1px solid rgba(70,45,25,0.12);
+  background:
+    radial-gradient(380px 220px at 35% 45%, rgba(120,80,40,0.10), rgba(120,80,40,0) 60%),
+    radial-gradient(380px 220px at 70% 40%, rgba(90,60,30,0.08), rgba(90,60,30,0) 62%),
+    linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+  overflow: hidden;
+}
+
+/* link */
+.preview-link{
+  margin: 10px auto 2px;
+  width: fit-content;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  text-decoration:none;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(43, 30, 20, .88);
+  background: rgba(255,255,255,.35);
+  border: 1px solid rgba(90, 60, 40, .18);
+  box-shadow: inset 0 1px 6px rgba(20, 12, 6, 0.10);
+}
+@media (hover:hover){
+  .preview-link:hover{ transform: translateY(-1px); }
+}
+
+/* Trust row (kept — NOT footer) */
+.trust{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  text-align:center;
+  padding-top: 6px;
+}
+.trust-item h3{
+  margin: 8px 0 6px;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 900;
+}
+.trust-item p{
+  margin: 0 auto;
+  color: rgba(43,30,20,.75);
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 48ch;
+}
+.trust-icon{ font-size: 22px; }
+
+/* tablet */
+@media (min-width: 760px){
+  main.landing{ padding: 22px var(--page-pad) 30px; }
+
+  .trust{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    text-align:left;
+  }
+  .trust-item p{ margin: 0; max-width: none; }
+}
+
+/* desktop */
+@media (min-width: 900px){
+  .previews{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .preview-title{ font-size: 22px; }
+  .preview-body{ min-height: 210px; }
+}
+
+/* slightly wider phones */
+@media (min-width: 480px){
+  .preview-body{ min-height: 200px; }
+}

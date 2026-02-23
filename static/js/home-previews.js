@@ -104,7 +104,7 @@
   }
 
   async function loadStark() {
-    const res = await fetch("/api/tree/stark", { headers: { "Accept": "application/json" } });
+    const res = await fetch("/api/sample/stark/tree", { headers: { "Accept": "application/json" } });
     if (!res.ok) throw new Error(`Failed to load Stark sample (${res.status})`);
     return res.json();
   }
