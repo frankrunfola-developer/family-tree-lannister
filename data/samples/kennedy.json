@@ -3,7 +3,6 @@
     "family_name": "Kennedy Family (Sample)",
     "note": "Sample dataset for exploring the app UI. Structured like gupta.json (spouse + parent/child relationships, top-level events)."
   },
-
   "people": [
     {
       "id": "joseph_sr",
@@ -21,7 +20,6 @@
       "photo": "/static/uploads/kennedy/rose.png",
       "location": { "city": "Boston", "region": "MA", "country": "USA", "lat": 42.3601, "lng": -71.0589 }
     },
-
     {
       "id": "jfk",
       "name": "John F. Kennedy",
@@ -46,7 +44,6 @@
       "photo": "/static/uploads/kennedy/ted.png",
       "location": { "city": "Boston", "region": "MA", "country": "USA", "lat": 42.3601, "lng": -71.0589 }
     },
-
     {
       "id": "jackie",
       "name": "Jacqueline Bouvier Kennedy",
@@ -71,7 +68,6 @@
       "photo": "/static/uploads/kennedy/joan.png",
       "location": { "city": "Boston", "region": "MA", "country": "USA", "lat": 42.3601, "lng": -71.0589 }
     },
-
     {
       "id": "caroline",
       "name": "Caroline Kennedy",
@@ -104,16 +100,14 @@
       "photo": "/static/uploads/kennedy/maria.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
     },
-
     {
       "id": "rfk_jr",
       "name": "Robert F. Kennedy Jr.",
-      "born": "1954",
+      "born": "1954-01-17",
       "died": "",
       "photo": "/static/uploads/kennedy/rfk_jr.png",
-      "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 }
+      "location": { "city": "Washington", "region": "DC", "country": "USA", "lat": 38.9072, "lng": -77.0369 }
     },
-
     {
       "id": "mary",
       "name": "Mary Kennedy",
@@ -123,14 +117,12 @@
       "location": { "city": "Mount Kisco", "region": "NY", "country": "USA", "lat": 41.2043, "lng": -73.7271 }
     }
   ],
-
   "relationships": [
     { "type": "spouse", "a": "joseph_sr", "b": "rose" },
     { "type": "spouse", "a": "jfk", "b": "jackie" },
     { "type": "spouse", "a": "rfk_sr", "b": "ethel" },
     { "type": "spouse", "a": "ted", "b": "joan" },
     { "type": "spouse", "a": "rfk_jr", "b": "mary" },
-    
 
     { "child": "jfk", "parent": "joseph_sr" },
     { "child": "jfk", "parent": "rose" },
@@ -156,7 +148,6 @@
     { "child": "maria", "parent": "rfk_sr" },
     { "child": "maria", "parent": "ethel" }
   ],
-
   "events": [
     {
       "id": "evt_1914_joseph_rose_marriage",
@@ -195,27 +186,17 @@
       "type": "birth",
       "date": "1959-10-04",
       "people": ["mary"],
-      "location": {"city": "Bayonne","region": "NJ","country": "USA","lat": 40.6687,"lng": -74.1143},
+      "location": { "city": "Bayonne", "region": "NJ", "country": "USA", "lat": 40.6687, "lng": -74.1143 },
       "description": "Born in Bayonne, New Jersey."
     },
     {
-    "id": "evt_1994_rfk_jr_mary_marriage",
-    "type": "marriage",
-    "date": "1994-04-15",
-    "people": ["rfk_jr", "mary"],
-    "location": {"city": "New York","region": "NY","country": "USA","lat": 40.7128, "lng": -74.0060},
-    "description": "Married Robert F. Kennedy Jr."
-    },
-
-    {
       "id": "evt_1994_rfk_jr_mary_marriage",
       "type": "marriage",
-      "date": "1994-04-01",
+      "date": "1994-04-15",
       "people": ["rfk_jr", "mary"],
       "location": { "city": "New York", "region": "NY", "country": "USA", "lat": 40.7128, "lng": -74.0060 },
       "description": "Married in New York."
     },
-
     {
       "id": "evt_1963_jfk_death",
       "type": "death",
@@ -261,7 +242,7 @@
       "type": "death",
       "date": "1999-07-16",
       "people": ["john_jr"],
-      "location": { "city": "Martha's Vineyard", "region": "MA", "country": "USA", "lat": 41.3800, "lng": -70.6455 },
+      "location": { "city": "Martha's Vineyard", "region": "MA", "country": "USA", "lat": 41.38, "lng": -70.6455 },
       "description": "Died near Martha's Vineyard."
     },
     {
@@ -272,22 +253,13 @@
       "location": { "city": "Hyannis Port", "region": "MA", "country": "USA", "lat": 41.6359, "lng": -70.2923 },
       "description": "Passed away in Massachusetts."
     },
-
-    {
-      "id": "evt_1959_mary_birth",
-      "type": "birth",
-      "date": "1959-10-04",
-      "people": ["mary"],
-      "location": { "city": "Bayonne", "region": "NJ", "country": "USA", "lat": 40.6687, "lng": -74.1143 },
-      "description": "Born in Bayonne, New Jersey."
-    },
     {
       "id": "evt_2012_mary_death",
       "type": "death",
       "date": "2012-05-16",
       "people": ["mary"],
-      "location": { "city": "Mount Kisco", "region": "NY", "country": "USA", "lat": 41.2043, "lng": -73.7271 },
-      "description": "Died in Mount Kisco, New York."
+      "location": { "city": "Bedford", "region": "NY", "country": "USA", "lat": 41.2043, "lng": -73.7271 },
+      "description": "Died in Bedford, New York."
     }
   ]
 }

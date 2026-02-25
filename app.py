@@ -46,14 +46,17 @@ SECRET = os.environ.get("LINEAGEMAP_SECRET", "dev-secret-change-me")
 # Default demo dataset when not logged in (previews + fallback)
 DEFAULT_SAMPLE_ID = "stark"
 
+MAP_ENABLED = False
+
 # Allow-list for /api/sample/<sample_id>/tree and demo pages
-ALLOWED_SAMPLES = {"stark", "got", "gupta", "kennedy", "lannister","kardashian", "jackson","ambani","sen"}
+ALLOWED_SAMPLES = {"kennedy", "windsor","kardashian", "jackson", "ambani", "stark", "lannister","sen", "gupta"}
 
 app = Flask(
     __name__,
     template_folder=str(APP_DIR / "templates"),
     static_folder=str(APP_DIR / "static"),
 )
+
 app.secret_key = SECRET
 
 
@@ -494,6 +497,12 @@ def timeline_view():
 
 @app.get("/map")
 def map_view():
+    if not MAP_ENABLED:
+        return render_template(
+            "under_construction.html",
+            title="Interactive Map is coming soon",
+            message="We’re polishing the map experience. For now, explore the Tree or Timeline."
+        )
     sample_id = optional_sample_id(request.args.get("sample"))
     return render_template("map.html", public_slug=None, sample_id=sample_id)
 

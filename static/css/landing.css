@@ -1,20 +1,21 @@
 /* landing.css
    Landing page ONLY (scoped to .landingPage body class)
-   - Removes demo dropdown UI on landing
-   - Hero + ornamental rules + parchment legacy cards
 */
 
-.landingPage .demoPicker{ display:none !important; } /* hide global demo picker on landing */
+.landingPage .demoPicker{ display:none !important; }
 .landingPage #navpanel .demoPicker{ display:none !important; }
 
 /* ------------------------------------------------------------------
    Landing background: faint romantic archival motifs (VERY subtle)
 ------------------------------------------------------------------- */
 
+.appFrameCard{
+  margin: 0px;
+}
+
 .landingPage{
   position: relative;
   background:
-    /* warm parchment wash */
     radial-gradient(1200px 650px at 50% -20%, rgba(255,255,255,.55), rgba(0,0,0,0)),
     radial-gradient(900px 520px at 10% 20%, rgba(255,248,236,.22), rgba(0,0,0,0)),
     radial-gradient(900px 520px at 90% 30%, rgba(245,230,206,.22), rgba(0,0,0,0));
@@ -27,40 +28,13 @@
   pointer-events: none;
   z-index: 0;
 
-  /* motif layer (more noticeable, but still elegant) */
   opacity: .34;
   background:
-    /* world map (primary romantic motif) */
     url("../img/world-muted.png"),
-
-    /* compass roses (3 instances, spaced away from the nav) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.42'%3E%3Ccircle cx='310' cy='310' r='210' stroke-width='2'/%3E%3Ccircle cx='310' cy='310' r='150' stroke-width='1.5'/%3E%3Cpath d='M310 70 V550 M70 310 H550' stroke-width='1.5'/%3E%3Cpath d='M310 120 L338 310 L310 500 L282 310 Z' stroke-width='1.5'/%3E%3Cpath d='M120 310 L310 282 L500 310 L310 338 Z' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.38'%3E%3Ccircle cx='210' cy='210' r='150' stroke-width='2'/%3E%3Ccircle cx='210' cy='210' r='100' stroke-width='1.2'/%3E%3Cpath d='M210 40 V380 M40 210 H380' stroke-width='1.2'/%3E%3Cpath d='M210 72 L232 210 L210 348 L188 210 Z' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.34'%3E%3Ccircle cx='170' cy='170' r='120' stroke-width='1.6'/%3E%3Cpath d='M170 30 V310 M30 170 H310' stroke-width='1'/%3E%3Cpath d='M170 56 L188 170 L170 284 L152 170 Z' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E"),
-
-    /* wax seal / ribbon (simple romantic trinket) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520' viewBox='0 0 520 520'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.30'%3E%3Ccircle cx='260' cy='240' r='86' stroke-width='3'/%3E%3Cpath d='M222 308 L252 456 L270 408 L290 456 L318 308' stroke-width='3'/%3E%3Cpath d='M210 238 C230 214 250 204 260 204 C290 204 314 228 314 240 C314 270 292 292 260 292 C238 292 220 276 210 258' stroke-width='1.5'/%3E%3C/g%3E%3C/svg%3E"),
-
-    /* subtle route arc */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.24' stroke-width='2'%3E%3Cpath d='M120 420 C320 220 520 220 720 420 S1080 620 1120 420'/%3E%3Ccircle cx='120' cy='420' r='6'/%3E%3Ccircle cx='720' cy='420' r='6'/%3E%3Ccircle cx='1120' cy='420' r='6'/%3E%3C/g%3E%3C/svg%3E");
-
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size:
-    980px auto,
-    520px auto,
-    360px auto,
-    300px auto,
-    420px auto,
-    1100px auto;
-
-  /* keep motifs away from the sticky nav area */
-  background-position:
-    center 180px,
-    88% 720px,
-    10% 980px,
-    86% 1280px,
-    12% 640px,
-    center 840px;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.42'%3E%3Ccircle cx='310' cy='310' r='210' stroke-width='2'/%3E%3Ccircle cx='310' cy='310' r='150' stroke-width='1.5'/%3E%3Cpath d='M310 70 V550 M70 310 H550' stroke-width='1.5'/%3E%3Cpath d='M310 120 L338 310 L310 500 L282 310 Z' stroke-width='1.5'/%3E%3Cpath d='M120 310 L310 282 L500 310 L310 338 Z' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-size: 980px auto, 520px auto;
+  background-position: center 180px, 88% 720px;
 }
 
 .landingPage::after{
@@ -69,12 +43,9 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
-
-  /* grain / paper texture layer (kept subtle) */
   opacity: .22;
   background: url("../img/paper-texture-light.jpg") center/cover;
 }
-
 
 .landingPage .page,
 .landingPage .topbar{
@@ -115,7 +86,6 @@
     0 16px 34px rgba(20,12,6,.12);
 }
 
-/* Mobile: ensure the brand wordmark is ALWAYS centered */
 @media (max-width: 720px){
   .landingPage .lmBrand{
     width: 100%;
@@ -128,7 +98,6 @@
   padding: 0 4px;
 }
 
-/* delicate flourish on both sides of the brand wordmark */
 .landingPage .lmBrandOrn{
   display: inline-block;
   width: min(180px, 22vw);
@@ -143,36 +112,12 @@
 .landingPage .lmTitle{
   margin: 8px 0 0;
   font-family: var(--serif);
-  font-weight: 800;
+  font-weight: 700;
   font-style: italic;
   letter-spacing: .25px;
   font-size: clamp(26px, 3.7vw, 42px);
   color: rgba(55,35,20,.88);
   text-shadow: 0 1px 0 rgba(255,255,255,.55);
-}
-
-.landingPage .lmTitle--romantic{
-  position: relative;
-  display: inline-block;
-  padding: 10px 16px;
-}
-
-/* subtle corner ornaments framing the main title */
-.landingPage .lmTitle--romantic::before,
-.landingPage .lmTitle--romantic::after{
-  content:"";
-  position:absolute;
-  inset: -2px;
-  pointer-events:none;
-  opacity: .35;
-  background-repeat: no-repeat;
-  background-size: 70px 70px;
-  background-position: 0 0, 100% 0, 0 100%, 100% 100%;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.55' stroke-width='1'%3E%3Cpath d='M6 24 C12 10 24 6 38 10'/%3E%3Cpath d='M10 38 C6 24 10 12 24 6'/%3E%3Cpath d='M12 12 L18 18'/%3E%3Cpath d='M18 12 L12 18'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.55' stroke-width='1'%3E%3Cpath d='M64 24 C58 10 46 6 32 10'/%3E%3Cpath d='M60 38 C64 24 60 12 46 6'/%3E%3Cpath d='M58 12 L52 18'/%3E%3Cpath d='M52 12 L58 18'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.55' stroke-width='1'%3E%3Cpath d='M6 46 C12 60 24 64 38 60'/%3E%3Cpath d='M10 32 C6 46 10 58 24 64'/%3E%3Cpath d='M12 58 L18 52'/%3E%3Cpath d='M18 58 L12 52'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.55' stroke-width='1'%3E%3Cpath d='M64 46 C58 60 46 64 32 60'/%3E%3Cpath d='M60 32 C64 46 60 58 46 64'/%3E%3Cpath d='M58 58 L52 52'/%3E%3Cpath d='M52 58 L58 52'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 .landingPage .lmSubcopy{
@@ -182,20 +127,6 @@
   line-height: 1.5;
   color: rgba(55,35,20,.72);
   text-shadow: 0 1px 0 rgba(255,255,255,.55);
-}
-
-/* subtle iconic underline / ornament under the main title */
-.landingPage .lmTitle::after{
-  content:"";
-  display:block;
-  width: min(520px, 92%);
-  height: 14px;
-  margin: 10px auto 0;
-  opacity: .70;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='14' viewBox='0 0 520 14'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.55' stroke-width='1'%3E%3Cpath d='M0 7 H214'/%3E%3Cpath d='M306 7 H520'/%3E%3Cpath d='M260 2 L266 7 L260 12 L254 7 Z'/%3E%3Cpath d='M238 7 C244 2.2 250 2.2 260 7 C250 11.8 244 11.8 238 7 Z'/%3E%3Cpath d='M282 7 C276 2.2 270 2.2 260 7 C270 11.8 276 11.8 282 7 Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 .landingPage .lmCta{
@@ -270,6 +201,297 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='10' viewBox='0 0 320 10'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.5' stroke-width='1'%3E%3Cpath d='M0 5 H132'/%3E%3Cpath d='M188 5 H320'/%3E%3Cpath d='M160 1 L165 5 L160 9 L155 5 Z'/%3E%3Cpath d='M147 5 C151 1.8 155 1.8 160 5 C155 8.2 151 8.2 147 5 Z'/%3E%3Cpath d='M173 5 C169 1.8 165 1.8 160 5 C165 8.2 169 8.2 173 5 Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
+/* -----------------------------
+   Legacy cards grid
+   - < 340px: 1-up
+   - >= 340px: 2-up always (no drift)
+------------------------------ */
+
+.landingPage .legacyGrid{
+  --legacy-gap: 10px;
+  --legacy-pad: 4px;
+  --card-pad-x: clamp(4px, 0.8vw, 8px);
+  --card-pad-y: clamp(8px, 1.1vw, 12px);
+  --photo-mb:   clamp(8px, 0.9vw, 10px);
+  --tag-mb:     clamp(7px, 0.9vw, 10px);
+
+  margin: 12px auto 6px;
+  width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--legacy-gap);
+
+  padding-inline: var(--legacy-pad);
+}
+
+@media (min-width: 900px){
+  .landingPage .legacyGrid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px){
+  .landingPage .legacyGrid{
+    --legacy-pad: 2px;
+    --legacy-gap: 8px;
+    margin: 8px auto 0;
+    padding-inline: 2px;
+  }
+}
+
+@media (max-width: 339px){
+  .landingPage .legacyGrid{
+    grid-template-columns: 1fr;
+    --legacy-pad: 0px;
+    --legacy-gap: 10px;
+  }
+}
+
+.legacyCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.legacyCard h3 {
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-bottom: 0.35rem;
+}
+
+/* Card fills the cell */
+.landingPage .legacyCard{
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  border-radius: 16px;
+  padding: clamp(4px, 0.7vw, 8px) clamp(3px, 0.6vw, 6px);
+  background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.14));
+  text-align: center;
+  overflow: hidden;
+
+  border: 1px solid rgba(130,92,58,.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.60),
+    inset 0 -1px 0 rgba(120,84,52,.10),
+    0 18px 40px rgba(20,12,6,.17);
+}
+
+/* 2 buttons must stay on one line */
+.legacyCard .cardActions{
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:nowrap;
+}
+.landingPage .legacyCard:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.60),
+    0 22px 54px rgba(20,12,6,.14);
+}
+
+.landingPage .legacyCard::before{
+  content:"";
+  position:absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 3px;
+  background:
+    linear-gradient(180deg, rgba(255,252,246,.62), rgba(228,210,184,.38)) border-box,
+    url("../img/paper-texture-light.jpg") center/cover;
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+
+  opacity: .72;
+  pointer-events: none;
+}
+
+.landingPage .legacyCard::after{
+  content:"";
+  position:absolute;
+  inset: 6px;
+  border-radius: 12px;
+  pointer-events:none;
+  opacity: .35;
+  background-repeat: no-repeat;
+  background-position: 0 0, 100% 0, 0 100%, 100% 100%;
+  background-size: 70px 70px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 24 C12 10 24 6 38 10'/%3E%3Cpath d='M10 38 C6 24 10 12 24 6'/%3E%3Cpath d='M12 12 L18 18'/%3E%3Cpath d='M18 12 L12 18'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 24 C58 10 46 6 32 10'/%3E%3Cpath d='M60 38 C64 24 60 12 46 6'/%3E%3Cpath d='M58 12 L52 18'/%3E%3Cpath d='M52 12 L58 18'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 46 C12 60 24 64 38 60'/%3E%3Cpath d='M10 32 C6 46 10 58 24 64'/%3E%3Cpath d='M12 58 L18 52'/%3E%3Cpath d='M18 58 L12 52'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 46 C58 60 46 64 32 60'/%3E%3Cpath d='M60 32 C64 46 60 58 46 64'/%3E%3Cpath d='M58 58 L52 52'/%3E%3Cpath d='M52 58 L58 52'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* make each button share the row and be allowed to shrink */
+.legacyCard .cardActions a,
+.legacyCard .cardActions button{
+  flex:1 1 0;
+  min-width:0;
+  white-space:nowrap;
+  padding: clamp(6px, 1.4vw, 10px) clamp(10px, 2.2vw, 14px);
+  font-size: clamp(0.72rem, 1.8vw, 0.9rem);
+}
+
+/* if you have icons or extra padding on mobile, keep it tight */
+@media (max-width: 420px){
+  .legacyCard .cardActions{ gap:6px; }
+}
+
+/* Photo: stable sizing (no vw swing = no drift) */
+.landingPage .legacyPhoto{
+  width: min(280px, 100%);
+  aspect-ratio: 4 / 5;
+  height: auto;
+  display: block;
+
+  border-radius: 14px;
+  margin: 6px auto var(--photo-mb);
+  padding: 5px;
+  overflow: hidden;
+
+  background: linear-gradient(180deg, rgba(255,255,255,.42), rgba(220,200,170,.20));
+  border: 1px solid rgba(110,78,50,.20);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.65),
+    0 12px 22px rgba(20,12,6,.10);
+}
+
+.landingPage .legacyPhoto img{
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: center;
+  filter: contrast(1.05) saturate(1.05);
+}
+
+/* Typography (Family name: always 1 line + auto scales down) */
+.landingPage .legacyName{
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 900;
+
+  font-size: clamp(16px, 2.3vw, 21px);
+  line-height: 1.15;
+  letter-spacing: .12px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  color: rgba(55,35,20,.92);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55);
+}
+
+.landingPage .legacyTag{
+  margin: 5px 0 var(--tag-mb);
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(55,35,20,.65);
+}
+
+.landingPage .legacyBtns{
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+
+  width: 100%;
+  padding-inline: clamp(6px, 1.2vw, 10px);
+  box-sizing: border-box;
+}
+
+/* Buttons: parchment texture + soft emboss */
+.landingPage .legacyBtn{
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+
+  text-decoration: none;
+  white-space: nowrap;
+
+  padding: clamp(4.5px, 0.95vw, 7.5px) clamp(7.5px, 1.55vw, 11.5px);
+  font-size: clamp(0.62rem, 1.25vw, 0.78rem);
+  font-family: var(--serif);
+  font-weight: 800;
+  letter-spacing: .15px;
+
+  color: rgba(55,35,20,.86);
+  border-radius: 10px;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.55), rgba(235,218,190,.22)),
+    url("../img/paper-texture-light.jpg") center/cover;
+
+  border: 1px solid rgba(130,92,58,.26);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.70),
+    inset 0 -1px 0 rgba(120,84,52,.12),
+    0 10px 18px rgba(20,12,6,.10);
+
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+@media (max-width: 420px){
+  .landingPage .legacyBtns{ gap: 6px; }
+}
+
+.landingPage .legacyBtn:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -1px 0 rgba(120,84,52,.14),
+    0 14px 24px rgba(20,12,6,.12);
+}
+
+.landingPage .legacyBtn:active{
+  transform: translateY(0px);
+  filter: brightness(.99);
+  box-shadow:
+    inset 0 2px 4px rgba(20,12,6,.12),
+    0 8px 16px rgba(20,12,6,.10);
+}
+
+.landingPage .legacyBtn{
+  position: relative;
+}
+
+.landingPage .legacyBtn::after{
+  content:"";
+  position:absolute;
+  inset: 2px;
+  border-radius: 9px;
+  pointer-events:none;
+  border: 1px solid rgba(255,255,255,.35);
+  opacity: .55;
+}
+
+/* -----------------------------
+   Bottom triptych (simple placeholders)
+------------------------------ */
+
 .landingPage .lmSectionHead--bottom{
   margin-top: 18px;
 }
@@ -282,170 +504,6 @@
   color: rgba(55,35,20,.70);
   font-size: 14px;
 }
-
-/* -----------------------------
-   Legacy cards grid
------------------------------- */
-
-.landingPage .legacyGrid{
-  margin: 12px auto 6px;
-  display: grid;
-
-  /* fixed-ish portrait columns so they center nicely */
-  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
-  gap: 16px;
-
-  justify-content: center; /* center the whole grid */
-  justify-items: center;
-  padding: 0; /* avoid asymmetric feel + prevent overflow on narrow screens */
-}
-
-@media (max-width: 520px){
-  .landingPage .legacyGrid{
-    grid-template-columns: min(340px, 92vw);
-  }
-}
-
-.landingPage .legacyCard{
-  position: relative;
-  border-radius: 16px;
-  padding: 18px 14px 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.14));
-  text-align: center;
-  overflow: hidden;
-
-  width: 100%;
-  max-width: 340px;
-  margin: 0 auto; /* hard-center cards even when grid track gets weird */
-
-  /* parchment edge */
-  border: 1px solid rgba(130,92,58,.24);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.60),
-    inset 0 -1px 0 rgba(120,84,52,.10),
-    0 18px 40px rgba(20,12,6,.17);
-  min-height: 355px; /* keep a portrait feel */
-}
-
-/* gentle "lift" on hover (small but noticeable) */
-.landingPage .legacyCard:hover{
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.60),
-    0 22px 54px rgba(20,12,6,.14);
-}
-
-/* Textured border + subtle ornament corners */
-.landingPage .legacyCard::before{
-  content:"";
-  position:absolute;
-  inset: 0;
-  border-radius: 16px;
-  padding: 10px;
-  background:
-    /* soft border gradient */
-    linear-gradient(180deg, rgba(255,252,246,.62), rgba(228,210,184,.38)) border-box,
-    /* subtle paper texture */
-    url("../img/paper-texture-light.jpg") center/cover;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: .72;
-  pointer-events: none;
-}
-
-.landingPage .legacyCard::after{
-  content:"";
-  position:absolute;
-  inset: 12px;
-  border-radius: 12px;
-  pointer-events:none;
-  opacity: .35;
-  background-repeat: no-repeat;
-  background-position:
-    0 0,
-    100% 0,
-    0 100%,
-    100% 100%;
-  background-size: 70px 70px;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 24 C12 10 24 6 38 10'/%3E%3Cpath d='M10 38 C6 24 10 12 24 6'/%3E%3Cpath d='M12 12 L18 18'/%3E%3Cpath d='M18 12 L12 18'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 24 C58 10 46 6 32 10'/%3E%3Cpath d='M60 38 C64 24 60 12 46 6'/%3E%3Cpath d='M58 12 L52 18'/%3E%3Cpath d='M52 12 L58 18'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 46 C12 60 24 64 38 60'/%3E%3Cpath d='M10 32 C6 46 10 58 24 64'/%3E%3Cpath d='M12 58 L18 52'/%3E%3Cpath d='M18 58 L12 52'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 46 C58 60 46 64 32 60'/%3E%3Cpath d='M60 32 C64 46 60 58 46 64'/%3E%3Cpath d='M58 58 L52 52'/%3E%3Cpath d='M52 58 L58 52'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* Photo */
-.landingPage .legacyPhoto{
-  width: 168px;
-  height: 168px;
-  margin: 6px auto 12px;
-  border-radius: 999px;
-  padding: 6px;
-  background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(220,200,170,.22));
-  border: 1px solid rgba(110,78,50,.20);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.65),
-    0 14px 26px rgba(20,12,6,.10);
-  display: grid;
-  place-items: center;
-}
-
-.landingPage .legacyPhoto img{
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  object-fit: cover;
-  filter: sepia(.20) contrast(1.02) saturate(.95);
-}
-
-/* Typography */
-.landingPage .legacyName{
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 20px;
-  letter-spacing: .18px;
-  color: rgba(55,35,20,.92);
-  text-shadow: 0 1px 0 rgba(255,255,255,.55);
-}
-
-.landingPage .legacyTag{
-  margin: 6px 0 12px;
-  font-size: 13px;
-  font-style: italic;
-  color: rgba(55,35,20,.65);
-}
-
-/* Buttons */
-.landingPage .legacyBtns{
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.landingPage .legacyBtn{
-  display: inline-block;
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: rgba(55,35,20,.85);
-  background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.14));
-  border: 1px solid rgba(130,92,58,.24);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
-}
-
-.landingPage .legacyBtn:hover{
-  transform: translateY(-1px);
-}
-
-/* -----------------------------
-   Bottom triptych (simple placeholders)
------------------------------- */
 
 .landingPage .lmTriptych{
   margin: 10px auto 4px;
@@ -478,70 +536,6 @@
   overflow: hidden;
 }
 
-/* parchment border + tiny corner flourishes (subtle) */
-.landingPage .lmShot::before{
-  content:"";
-  position:absolute;
-  inset: 0;
-  border-radius: 14px;
-  padding: 10px;
-  background:
-    linear-gradient(180deg, rgba(255,248,238,.55), rgba(230,214,190,.30)) border-box,
-    url("../img/paper-texture-light.jpg") center/cover;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: .42;
-  pointer-events:none;
-}
-
-.landingPage .lmShot::after{
-  content:"";
-  position:absolute;
-  inset: 12px;
-  border-radius: 12px;
-  pointer-events:none;
-  opacity: .22;
-  background-repeat: no-repeat;
-  background-position: 0 0, 100% 0, 0 100%, 100% 100%;
-  background-size: 60px 60px;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 24 C12 10 24 6 38 10'/%3E%3Cpath d='M10 38 C6 24 10 12 24 6'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 24 C58 10 46 6 32 10'/%3E%3Cpath d='M60 38 C64 24 60 12 46 6'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M6 46 C12 60 24 64 38 60'/%3E%3Cpath d='M10 32 C6 46 10 58 24 64'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 70 70'%3E%3Cg fill='none' stroke='%237a5a3c' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M64 46 C58 60 46 64 32 60'/%3E%3Cpath d='M60 32 C64 46 60 58 46 64'/%3E%3C/g%3E%3C/svg%3E");
-
-.landingPage .lmShot--map{
-  background-image: url("../img/landing/tease-map.png");
-}
-
-.landingPage .lmShot--tree{
-  background-image: url("../img/landing/tease-tree.png");
-}
-
-.landingPage .lmShot--timeline{
-  background-image: url("../img/landing/tease-timeline.png");
-}
-
-/* Make auth panel breathe under the new layout */
-.landingPage .landingAuthWrap{
-  margin-top: 16px;
-}
-
-
-/* Mobile: keep at least 2 cards per row (no card styling changes) */
-@media (max-width: 680px) {
-  .legacyGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-}
-
-/* Tiny phones: allow 1 column only if it truly can't fit */
-@media (max-width: 360px) {
-  .legacyGrid {
-    grid-template-columns: 1fr !important;
-  }
-}
-}
+.landingPage .lmShot--map{ background-image: url("../img/landing/tease-map.png"); }
+.landingPage .lmShot--tree{ background-image: url("../img/landing/tease-tree.png"); }
+.landingPage .lmShot--timeline{ background-image: url("../img/landing/tease-timeline.png"); }

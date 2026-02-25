@@ -50,7 +50,7 @@ JS expects:
           <option value="jackson" {{ 'selected' if sid == 'jackson' else '' }}>Jackson</option>
           <option value="windsor" {{ 'selected' if sid == 'windsor' else '' }}>Windsor</option>
           <option value="ambani" {{ 'selected' if sid == 'ambani' else '' }}>Ambani</option>
-            <option value="sen" {{ 'selected' if sid == 'sen' else '' }}>Sen</option>
+          <option value="sen" {{ 'selected' if sid == 'sen' else '' }}>Sen</option>
         </select>
       </div>
       {% endif %}
@@ -93,10 +93,15 @@ JS expects:
     <div class="demoPicker demoPicker--mobile">
       <p class="demoPickerLabel">Demo Family</p>
       <select id="demoFamilySelectMobile" class="demoPickerSelect demoPickerSelect--compact" aria-label="Demo family picker (mobile)">
-        <option value="stark" {{ 'selected' if sid == 'stark' else '' }}>Stark</option>
-        <option value="gupta" {{ 'selected' if sid == 'gupta' else '' }}>Gupta</option>
         <option value="kennedy" {{ 'selected' if sid == 'kennedy' else '' }}>Kennedy</option>
+        <option value="windsor" {{ 'selected' if sid == 'windsor' else '' }}>Windsor</option>
+        <option value="kardashian" {{ 'selected' if sid == 'kardashian' else '' }}>Kardashian</option>
+        <option value="jackson" {{ 'selected' if sid == 'jackson' else '' }}>Jackson</option>
+        <option value="ambani" {{ 'selected' if sid == 'ambani' else '' }}>Ambani</option>
+        <option value="stark" {{ 'selected' if sid == 'stark' else '' }}>Stark</option>
         <option value="lannister" {{ 'selected' if sid == 'lannister' else '' }}>Lannister</option>
+        <option value="sen" {{ 'selected' if sid == 'sen' else '' }}>Sen</option>
+        <option value="gupta" {{ 'selected' if sid == 'gupta' else '' }}>Gupta</option>
       </select>
     </div>
     {% endif %}

@@ -1,20 +1,42 @@
 /* topbar.css
    Universal topbar + nav controls + buttons + auth badge
-   MOBILE FIRST: brand + actions; hide center links
-   DESKTOP: restore center links
+   MOBILE FIRST: big brand scroll on left + actions; hide center links
+   DESKTOP: restore center links + grand scroll
+
+   Alignment goal:
+   - Brand aligns with the same left edge as main.page (layout.css):
+     main.page { max-width: var(--content-max); margin: 0 auto; padding: 16px var(--page-pad) 26px; }
+   - So topbar-inner MUST use padding-left/right: var(--page-pad)
 */
+
+:root{
+  /* scales with viewport, but bounded */
+  --brand-rail: clamp(180px, 24vw, 320px);
+  --brand-height: clamp(78px, 9vw, 120px);
+
+  /* keep your positioning */
+  --brand-overhang: 18px;
+  --brand-nudge-x: -18px;
+  --brand-nudge-y: 0px;
+}
 
 .topbar{
   position: sticky;
   top: 0;
   z-index: 1000;
+
+  height: 72px;
+  display: flex;
+  align-items: center;
+
   background:
     linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.10)),
     url("../img/paper-texture-light.jpg") center/cover,
     var(--nav-bg);
+
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--nav-border);
-  overflow: visible; /* allow oversized scroll to overhang */
+  overflow: visible;
 }
 
 /* Subtle ornamental rule at the bottom of the nav */
@@ -34,82 +56,78 @@
 }
 
 .topbar-inner{
-  max-width: var(--content-max);
-  margin: 0 auto;
-  /* mobile-first: enough vertical room for the oversized scroll */
-  /* tighten vertical space so the scroll overhang reads as "hanging" */
-  padding: 10px calc(var(--page-pad) + env(safe-area-inset-left)) 12px;
-  padding-right: calc(var(--page-pad) + env(safe-area-inset-right));
   display: grid;
-  /* IMPORTANT: 1fr squeezes the brand at ~550px and makes the scroll look “smushed”.
-     Use auto/auto + space-between so both sides stay inside the padding. */
-  grid-template-columns: auto auto;
-  justify-content: space-between;
+  grid-template-columns: var(--brand-rail) 1fr auto;
   align-items: center;
   gap: 12px;
+
+  max-width: var(--content-max);
+  margin: 0 auto;
+
+  /* EXACT match to main.page left/right padding */
+  padding: 10px var(--shell-gutter-left) 10px var(--shell-gutter-right);
 }
 
+/* LEFT slot stays on the far-left; allow logo to sit higher */
 .topbar-left{
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 10px;
+  display:flex;
+  align-items:flex-start;
+  align-self: start;
+  justify-self: start;
   min-width: 0;
-  flex-wrap: nowrap;
 }
 
+/* ------------------------------------------------------------
+   Brand: BIG scroll on the left with a real overhang
+------------------------------------------------------------ */
 .brandIcon{
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
+  display:block;
+  width: 100%;
+  height: var(--brand-height);
   position: relative;
-  width: clamp(210px, 26vw, 310px);
-  height: clamp(64px, 7vw, 86px); /* give the scroll real vertical room */
-  /* do NOT allow flex/grid squeeze to shrink the scroll at ~550px */
-  flex: 0 0 auto;
+  line-height: 0;
+  overflow: visible;
+
+  margin-left: 0;
+  transform: translateX(var(--brand-nudge-x)) translateY(var(--brand-nudge-y));
 }
 
+/* image itself */
 .brandMark{
-  /* oversized scroll that OVERHANGS the topbar (grand, not smushed) */
-  position: absolute;
-  left: 0;
-  top: -18px;
-  width: clamp(230px, 28vw, 340px);
-  height: auto;
-  display: block;
-  flex-shrink: 0;
+  display:block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   pointer-events: none;
 
+  transform: translateY(var(--brand-overhang));
   filter:
     drop-shadow(0 10px 16px rgba(20,12,6,.16))
     drop-shadow(0 1px 0 rgba(255,255,255,.55));
 }
 
-/* ------------------------------------------------------------
-   Mid-size phones (e.g., ~550px wide): keep the scroll GRAND
-   The old breakpoint at 520px was too tight, so at ~550px the
-   scroll looked underscaled.
------------------------------------------------------------- */
-@media (max-width: 640px){
-  .brandIcon{
-    width: clamp(240px, 62vw, 380px);
-    height: clamp(72px, 14vw, 92px);
-  }
-  .brandMark{
-    top: -16px;
-    width: clamp(270px, 72vw, 430px);
-  }
+/* Mobile: keep it big, but prevent collisions */
+@media (max-width: 520px){
+  :root{
+    --brand-rail: clamp(220px, 64vw, 360px);
+    --brand-height: 132px;
+    --brand-overhang: 10px;
 
-  /* keep controls tight so the scroll stays the hero */
-  .topbar-right{ gap: .5rem; }
+    --brand-nudge-x: -16px;
+    --brand-nudge-y: -8px;
+  }
 }
 
-@media (max-width: 520px){
-  .brandMark{
-    top: -10px;
-    width: clamp(220px, 52vw, 340px);
-  }
+/* Ultra small */
+@media (max-width: 360px){
+  :root{
+    --brand-rail: clamp(200px, 72vw, 320px);
+    --brand-height: 120px;
+    --brand-overhang: 8px;
 
-  .brandIcon{ width: clamp(190px, 50vw, 320px); }
+    --brand-nudge-x: -12px;
+    --brand-nudge-y: -6px;
+  }
 }
 
 /* ------------------------------------------------------------
@@ -125,7 +143,6 @@
   line-height: 1;
   white-space: nowrap;
 
-  /* subtle “nameplate” feel */
   position: relative;
   padding: 6px 10px;
   border-radius: 999px;
@@ -172,7 +189,6 @@
 
 /* =========================================================
    Mobile hamburger + dropdown nav
-   - Works with static/js/nav.js which toggles class "open"
    ========================================================= */
 .navToggle{
   display: inline-flex;
@@ -328,18 +344,18 @@
   .userBadge .email{ display:none; }
 }
 
-/* desktop: restore center nav */
+/* ------------------------------------------------------------
+   DESKTOP: restore center nav + keep grand scroll
+------------------------------------------------------------ */
 @media (min-width: 900px){
+
   .topbar-inner{
-    /* Prevent right-side actions from drifting outside at ~1200px widths.
-       Use auto columns on edges and a flexible middle column. */
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: var(--brand-rail) 1fr auto;
     gap: 14px;
-    padding: 10px calc(var(--page-pad) + env(safe-area-inset-left));
-    padding-right: calc(var(--page-pad) + env(safe-area-inset-right));
+    padding: 10px var(--shell-gutter-left);
+    padding-right: var(--shell-gutter-right);
   }
 
-  /* allow the center links to compress instead of pushing the right edge out */
   .topbar-links{ min-width: 0; }
   .topbar-right{ justify-self: end; }
 
@@ -369,7 +385,6 @@
     border: 1px solid rgba(90, 60, 40, 0.18);
   }
 
-  /* desktop: hide hamburger + mobile dropdown */
   .navToggle{ display:none; }
   .mobileNav{ display:none !important; }
 }
@@ -395,7 +410,7 @@
   }
   .brandTitle::before,
   .brandTitle::after{
-    display: none; /* keep it clean when space is tight */
+    display: none;
   }
 }
 
@@ -469,7 +484,6 @@
   cursor: pointer;
   outline: none;
 
-  /* Chevron */
   background-image:
     linear-gradient(45deg, transparent 50%, rgba(50,35,20,.7) 50%),
     linear-gradient(135deg, rgba(50,35,20,.7) 50%, transparent 50%);
@@ -502,3 +516,6 @@
   .demoPickerLabel{ font-size: .8rem; }
   .demoPickerSelect{ font-size: .85rem; }
 }
+
+.brandIcon{ transform: translateX(var(--brand-nudge-x)) translateY(0px); }
+.brandMark{ transform: translateY(18px); }
