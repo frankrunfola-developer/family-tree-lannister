@@ -31,6 +31,9 @@ JS expects:
 
       <a href="{{ url_for('map_view') }}" data-preserve-sample="1"
         class="{{ 'is-active' if request.path == '/map' else '' }}">Map</a>
+
+      <a href="{{ url_for('explore_legacies') }}"
+        class="{{ 'is-active' if request.path == '/explore-legacies' else '' }}">Explore Legacies</a>
     </nav>
 
     <!-- RIGHT -->

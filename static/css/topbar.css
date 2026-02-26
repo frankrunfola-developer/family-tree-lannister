@@ -13,7 +13,7 @@
 
    Mobile grid goal:
    - When center links are hidden on mobile, collapse the grid to 2 columns (brand + right)
-     so the right controls don't get shoved to the far edge by an empty 1fr column.
+     so the right controls don't get shoved by an empty center column.
 */
 
 :root{
@@ -37,6 +37,8 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  /* add this */
+  position: sticky;
 
   height: 72px;
   display: flex;
@@ -49,7 +51,10 @@
 
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--nav-border);
-  overflow: visible;
+
+  /* keep vertical logo overhang, prevent horizontal push */
+  overflow-y: visible;
+  overflow-x: clip;
 }
 
 /* Subtle ornamental rule at the bottom of the nav */
@@ -71,6 +76,7 @@
 .topbar-inner{
   display: grid;
   grid-template-columns: minmax(0, var(--brand-rail)) 1fr auto;
+  grid-template-areas: "left center right";
   align-items: center;
   gap: 12px;
 
@@ -81,11 +87,12 @@
   padding: 10px var(--shell-gutter-left) 10px var(--shell-gutter-right);
 }
 
-/* Mobile: center links are hidden, so collapse to 2 columns */
-@media (max-width: 899px){
-  .topbar-inner{
-    grid-template-columns: minmax(0, var(--brand-rail)) auto;
-  }
+.topbar-left  { grid-area: left; }
+.topbar-links { grid-area: center; }
+.topbar-right {
+  grid-area: right;
+  justify-self: end;
+  min-width: 0;
 }
 
 /* LEFT slot stays on the far-left; allow logo to sit higher */
@@ -112,7 +119,6 @@
   transform: translateX(var(--brand-nudge-x)) translateY(var(--brand-nudge-y));
 }
 
-/* image itself */
 .brandMark{
   display:block;
   width: 100%;
@@ -124,30 +130,6 @@
   filter:
     drop-shadow(0 10px 16px rgba(20,12,6,.16))
     drop-shadow(0 1px 0 rgba(255,255,255,.55));
-}
-
-/* Mobile: keep proportional, but protect right-side controls */
-@media (max-width: 520px){
-  :root{
-    --brand-rail: clamp(150px, 48vw, 230px);
-    --brand-height: clamp(64px, 12vw, 92px);
-    --brand-overhang: clamp(8px, 2.2vw, 14px);
-
-    --brand-nudge-x: -14px;
-    --brand-nudge-y: 0px;
-  }
-}
-
-/* Ultra small */
-@media (max-width: 360px){
-  :root{
-    --brand-rail: clamp(140px, 52vw, 210px);
-    --brand-height: clamp(58px, 14vw, 86px);
-    --brand-overhang: clamp(6px, 2.4vw, 12px);
-
-    --brand-nudge-x: -10px;
-    --brand-nudge-y: 0px;
-  }
 }
 
 /* ------------------------------------------------------------
@@ -205,6 +187,7 @@
   justify-content: flex-end;
   align-items: center;
   gap: .6rem;
+  flex-wrap: nowrap;
 }
 
 /* =========================================================
@@ -246,36 +229,68 @@
   border-radius: 2px;
 }
 .navToggleIcon::before{ top: -6px; }
-.navToggleIcon::after{ top: 6px; }
+
 
 /* dropdown panel (closed by default) */
 .mobileNav{
-  display: none;
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--page-pad);
-  position: relative;
-  z-index: 1000;
+  display: none !important;
+
+  /* overlay dropdown (does not push layout) */
+  position: absolute;
+  top: 100%;
+  left: auto !important;
+  right: var(--page-pad) !important;
+
+  /* compact panel */
+  width: min(260px, calc(100vw - (var(--page-pad) * 2)));
+  margin: 0;
+  padding: 10px;
+
+  z-index: 1100;
+
+  /* easy-to-see surface */
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(90,60,40,.22);
+  border-radius: 16px;
+  box-shadow: 0 16px 30px rgba(25,18,10,.18);
 }
 
 .mobileNav.open{
-  display: block;
-  padding-bottom: 12px;
+  display: block !important;
 }
 
+/* link pills (compact + readable) */
 .mobileNav a{
   display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+
   text-decoration: none;
   font-family: var(--serif);
   font-weight: 900;
-  color: rgba(60, 40, 25, 0.86);
-  padding: 12px 12px;
+  color: rgba(60, 40, 25, 0.90);
+
+  background: rgba(250,246,238,0.95);
+  border: 1px solid rgba(90, 60, 40, 0.18);
   border-radius: 14px;
-  background: rgba(255,255,255,0.28);
-  border: 1px solid rgba(90, 60, 40, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
-  margin-top: 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70);
 }
+
+.mobileNav a:first-child{ margin-top: 0; }
+
+.mobileNav a.is-active{
+  background: rgba(214,170,90,0.20);
+  border-color: rgba(120,80,40,0.28);
+}
+
+
+.mobileNav.open{
+  display: block !important;
+}
+
 .mobileNav a.is-active{
   background: rgba(255,255,255,0.45);
   border-color: rgba(90, 60, 40, 0.22);
@@ -365,10 +380,72 @@
 }
 
 /* ------------------------------------------------------------
-   DESKTOP: restore center nav + grand scroll stays proportional
+   MOBILE: collapse grid to 2 columns (brand + right)
+------------------------------------------------------------ */
+@media (max-width: 899px){
+  .topbar-inner{
+    grid-template-areas: "left right";
+    grid-template-columns: minmax(0, var(--brand-rail)) auto;
+  }
+
+  .topbar-links{
+    display: none !important;
+  }
+}
+
+/* Mobile: keep proportional, but protect right-side controls */
+@media (max-width: 520px){
+  :root{
+    --brand-rail: clamp(150px, 48vw, 230px);
+    --brand-height: clamp(64px, 12vw, 92px);
+    --brand-overhang: clamp(8px, 2.2vw, 14px);
+
+    --brand-nudge-x: -14px;
+    --brand-nudge-y: 0px;
+  }
+}
+
+/* Ultra small */
+@media (max-width: 360px){
+  :root{
+    --brand-rail: clamp(140px, 52vw, 210px);
+    --brand-height: clamp(58px, 14vw, 86px);
+    --brand-overhang: clamp(6px, 2.4vw, 12px);
+
+    --brand-nudge-x: -10px;
+    --brand-nudge-y: 0px;
+  }
+}
+
+/* slightly wider phones */
+@media (max-width: 480px){
+  .brandTitle{
+    padding: 5px 8px;
+  }
+  .brandTitle::before,
+  .brandTitle::after{
+    width: 12px;
+  }
+  .brandTitle::before{ left: -14px; }
+  .brandTitle::after{ right: -14px; }
+}
+
+/* ultra small */
+@media (max-width: 360px){
+  .brandTitle{
+    padding: 0px 0px;
+    letter-spacing: .15px;
+  }
+  .brandTitle::before,
+  .brandTitle::after{
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   DESKTOP: restore center nav + hide hamburger/panel
 ------------------------------------------------------------ */
 @media (min-width: 900px){
-
   .topbar-inner{
     grid-template-columns: minmax(0, var(--brand-rail)) 1fr auto;
     gap: 14px;
@@ -377,7 +454,6 @@
   }
 
   .topbar-links{ min-width: 0; }
-  .topbar-right{ justify-self: end; }
 
   .topbar-links{
     display: inline-flex;
@@ -409,35 +485,9 @@
   .mobileNav{ display:none !important; }
 }
 
-/* slightly wider phones */
-@media (max-width: 480px){
-  .brandTitle{
-    padding: 5px 8px;
-  }
-  .brandTitle::before,
-  .brandTitle::after{
-    width: 12px;
-  }
-  .brandTitle::before{ left: -14px; }
-  .brandTitle::after{ right: -14px; }
-}
-
-/* ultra small */
-@media (max-width: 360px){
-  .brandTitle{
-    padding: 0px 0px;
-    letter-spacing: .15px;
-  }
-  .brandTitle::before,
-  .brandTitle::after{
-    display: none;
-  }
-}
-
 /* ------------------------------------------------------------
    Demo sample picker (Topbar)
 ------------------------------------------------------------ */
-
 .desktopOnly { display: inline-flex; }
 .mobileOnly { display: none; }
 
@@ -535,4 +585,75 @@
   .demoPicker{ padding: .28rem .5rem; }
   .demoPickerLabel{ font-size: .8rem; }
   .demoPickerSelect{ font-size: .85rem; }
+}
+
+/* tighten right-side spacing on small phones */
+@media (max-width: 460px){
+  .topbar-right{ gap: .45rem; }
+  .topbar-right .btn{ padding: 10px 12px; }
+}
+
+/* tiny screens: shrink logo rail + controls */
+@media (max-width: 420px){
+  :root{
+    --brand-rail: clamp(118px, 34vw, 165px);
+    --brand-height: clamp(58px, 11vw, 82px);
+    --brand-nudge-x: -10px;
+  }
+
+  .topbar-inner{ gap: 10px; }
+
+  .topbar-right .btn{
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .navToggle{
+    width: 38px;
+    height: 38px;
+  }
+}
+
+
+.mobileNav{
+  background: #f7f1e6 !important; /* warm parchment */
+  backdrop-filter: none !important;
+}
+
+
+/* Dropdown must win every stacking fight */
+.topbar{ z-index: 9999 !important; }
+
+.mobileNav{
+  z-index: 10000 !important;
+  position: absolute !important;
+}
+
+.mobileNav a,
+.mobileNav .demoPicker{
+  position: relative;
+  z-index: 10001 !important;
+  background: #f7f1e6 !important; /* opaque */
+}
+
+
+/* Make mobile dropdown narrower */
+.mobileNav{
+  width: min(150px, calc(100vw - (var(--page-pad) * 2))) !important;
+  padding: 8px !important;
+}
+
+/* Slightly tighter link pills */
+.mobileNav a{
+  padding: 9px 10px !important;
+}
+
+
+/* Push the hamburger to the absolute far-right inside the right cluster */
+.topbar-right{
+  width: 100%;
+}
+
+.navToggle{
+  margin-left: auto;
 }
