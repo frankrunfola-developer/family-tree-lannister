@@ -494,7 +494,9 @@ def timeline_view():
     sample_id = optional_sample_id(request.args.get("sample"))
     return render_template("timeline.html", public_slug=None, sample_id=sample_id)
 
-
+@app.route("/explore_legacies_view")
+def explore_legacies_view():
+    return render_template("explore_legacies.html")
 
 @app.get("/map")
 def map_view():
@@ -507,9 +509,6 @@ def map_view():
     sample_id = optional_sample_id(request.args.get("sample"))
     return render_template("map.html", public_slug=None, sample_id=sample_id)
 
-@app.route("/explore-legacies")
-def explore_legacies():
-    return render_template("explore_legacies.html")
 
 # -----------------------------
 # AUTH PAGES
