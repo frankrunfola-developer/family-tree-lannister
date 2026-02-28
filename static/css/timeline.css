@@ -240,6 +240,9 @@
   box-shadow: 0 16px 40px rgba(40,32,24,0.10);
   overflow: hidden;
   min-height: 140px;
+
+  /* Path geometry vars (inherited by SVG path rules below) */
+  --tl-stroke-w: 9;
 }
 
 .tlSnakeSvg{
@@ -254,7 +257,7 @@
 .tlSPath{
   fill: none;
   stroke: rgba(70,50,36,0.72);
-  stroke-width: 9;
+  stroke-width: var(--tl-stroke-w, 9);
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 6px 10px rgba(40,32,24,0.12));
@@ -284,6 +287,15 @@
   --tl-pad-x: 24px;
   --tl-pad-y: 34px;
   --tl-cols: 4;
+
+  /* Elbow knobs:
+     --tl-elbow-x still supported as your “push-out preference”
+     --tl-elbow-r: 0 means JS auto-computes based on gap/lanes */
+  --tl-elbow-x: 24px;
+  --tl-elbow-r: 0px;
+
+  /* Optional (JS uses this for geometry math) */
+  --tl-stroke-w: 9;
 }
 
 /* Card */
@@ -381,7 +393,6 @@
   }
 }
 
-
 /* Desktop */
 @media (min-width: 900px){
   .tlSnakeCards{
@@ -393,6 +404,10 @@
     --tl-gap-y: 78px;
     --tl-pad-x: 24px;
     --tl-pad-y: 34px;
+
+    --tl-elbow-x: 24px;
+    --tl-elbow-r: 0px;
+    --tl-stroke-w: 9;
   }
 
   .tlSPhoto{ width: 52px; height: 64px; flex-basis: 52px; }
@@ -417,6 +432,10 @@
     --tl-gap-y: 56px;
     --tl-pad-x: 18px;
     --tl-pad-y: 18px;
+
+    --tl-elbow-x: 20px;
+    --tl-elbow-r: 0px;
+    --tl-stroke-w: 8;
   }
 
   .tlSCard{ padding: 9px 9px; gap: 7px; }
@@ -439,28 +458,34 @@
     --tl-gap-y: 52px;
     --tl-pad-x: 16px;
     --tl-pad-y: 18px;
+
+    --tl-elbow-x: 18px;
+    --tl-elbow-r: 0px;
+    --tl-stroke-w: 6;
   }
 
-  .tlSPath{ stroke-width: 6; }
+  .tlSnakeRoot{ --tl-stroke-w: 6; }
   .tlSDots circle{ opacity: 0.18; }
 }
-
 
 /* Mobile: shrink timeline nodes/cards + tighten spacing */
 @media (max-width: 480px) {
   .tlSnakeCards {
-    --tl-card-w: 208px;   /* was ~240 */
-    --tl-card-h: 82px;    /* was ~92  */
-    --tl-gap-x: 18px;     /* was ~24  */
-    --tl-gap-y: 20px;     /* was ~26  */
-    --tl-pad-x: 18px;     /* was ~34  */
-    --tl-pad-y: 22px;     /* was ~34  */
-    --tl-elbow-x: 36px;   /* slightly tighter turns */
-    --tl-bleed: 18px;     /* safe draw padding */
-  }
-}
+    --tl-card-w: 208px;
+    --tl-card-h: 82px;
+    --tl-gap-x: 18px;
+    --tl-gap-y: 20px;
+    --tl-pad-x: 18px;
+    --tl-pad-y: 22px;
+    --tl-elbow-x: 36px;
+    --tl-bleed: 18px;
 
-@media (max-width: 480px) {
+    --tl-elbow-r: 0px;
+    --tl-stroke-w: 6;
+  }
+
+  .tlSnakeRoot{ --tl-stroke-w: 6; }
+
   .tlSName { font-size: 14px; }
   .tlSMeta { font-size: 12px; }
   .tlSDate { font-size: 12px; }
@@ -478,5 +503,10 @@
     --tl-pad-y: 18px;
     --tl-elbow-x: 32px;
     --tl-bleed: 16px;
+
+    --tl-elbow-r: 0px;
+    --tl-stroke-w: 6;
   }
+
+  .tlSnakeRoot{ --tl-stroke-w: 6; }
 }

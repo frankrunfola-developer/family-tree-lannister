@@ -1,3 +1,4 @@
+// static/js/timeline.js
 // LineAgeMap Timeline — serpentine “single path” layout
 // Builds from /api/tree/<family>
 // Schema expected: { people:[{id,name,born,died,location:{city,region,country}, events?:[...] , photo?:... }], relationships:[...] }
@@ -44,7 +45,9 @@
       cardW: cssPx(el, "--tl-card-w", (CFG_V.CARD_W ?? 240)),
       cardH: cssPx(el, "--tl-card-h", (CFG_V.CARD_H ?? 92)),
       cols: parseInt(getComputedStyle(el).getPropertyValue("--tl-cols").trim(), 10) || (CFG_V.COLS ?? 3),
-      elbowX: cssPx(el, "--tl-elbow-x", (CFG_V.ELBOW_X ?? 44)),
+      elbowX: cssPx(el, "--tl-elbow-x", (CFG_V.ELBOW_X ?? 24)),
+      elbowR: cssPx(el, "--tl-elbow-r", (CFG_V.ELBOW_R ?? 0)),          // NEW
+      strokeW: cssPx(el, "--tl-stroke-w", (CFG_V.STROKE_W ?? 9)),       // NEW
       bleed: cssPx(el, "--tl-bleed", (CFG_V.BLEED ?? 34)),
     };
   }
@@ -252,51 +255,48 @@
   function curveBetween(x1, y1, x2, y2) {
     const dx = Math.abs(x2 - x1);
 
-    // Never allow bezier handles to exceed half the segment length,
-    // otherwise the curve will overshoot the elbow on small dx (mobile).
     const pull = Math.min(
-      clamp(dx * 0.35, 10, 120),   // reasonable default shaping
-      Math.max(6, dx * 0.5)        // hard cap prevents overshoot
+      clamp(dx * 0.35, 10, 120),
+      Math.max(6, dx * 0.5)
     );
 
     return `C ${x1 + (x2 > x1 ? pull : -pull)} ${y1},
             ${x2 - (x2 > x1 ? pull : -pull)} ${y2},
             ${x2} ${y2}`;
   }
-  // ✅ Updated: clamp elbow points inside safe bounds so connectors never clip
-function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
-  const rawStartX = x1 + dir * (cardW / 2 + edgeOut);
-  const rawEndX = x2 + (-dir) * (cardW / 2 + edgeOut);
 
-  const startX = clamp(rawStartX, minX, maxX);
-  const endX = clamp(rawEndX, minX, maxX);
+  function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
+    const dropY = y2 - r - dropPad;
 
-  // Vertical drop endpoint before rounding into the next row
-  const dropY = y2 - r - dropPad;
+    // Cap how far the elbow can be from the node center.
+    const stubMax = Math.max(18, Math.floor((maxX - minX - cardW) / 2) - 10);
+    const want = (cardW / 2 + edgeOut);
+    const used = Math.min(want, stubMax);
 
-  // Round corner direction (endX relative to startX)
-  const sgn = (endX >= startX) ? 1 : -1;
+    const rawStartX = x1 + dir * used;
+    const rawEndX = x2 + (-dir) * used;
 
-  // If the horizontal run is too short to fit a radius, reduce radius
-  const maxR = Math.max(2, Math.abs(endX - startX));
-  const rr = Math.min(r, maxR);
+    const startX = clamp(rawStartX, minX, maxX);
+    const endX = clamp(rawEndX, minX, maxX);
 
-  const k = 0.55228475 * rr; // bezier constant for quarter-circle
+    const sgn = (endX >= startX) ? 1 : -1;
 
-  // Crisp: straight to elbow, down, rounded into horizontal, straight to target row, straight to node
-  return [
-    `L ${startX} ${y1}`,         // straight into the elbow (prevents overshoot)
-    `L ${startX} ${dropY}`,      // straight down
+    // FIX: radius must scale with available horizontal run or it balloons
+    const run = Math.abs(endX - startX);
+    const rr = Math.min(r, Math.max(6, Math.floor(run * 0.55)));
+    const k = 0.55228475 * rr;
 
-    // Quarter-round into the next row’s horizontal run
-    `C ${startX} ${dropY + k},
-       ${startX + sgn * k} ${y2},
-       ${startX + sgn * rr} ${y2}`,
+    return [
+      `L ${startX} ${y1}`,
+      `L ${startX} ${dropY}`,
+      `C ${startX} ${dropY + k},
+        ${startX + sgn * k} ${y2},
+        ${startX + sgn * rr} ${y2}`,
+      `L ${endX} ${y2}`,
+      `L ${x2} ${y2}`
+    ].join(" ");
+  }
 
-    `L ${endX} ${y2}`,           // horizontal across
-    `L ${x2} ${y2}`              // straight into the next node (prevents overshoot)
-  ].join(" ");
-}
   function renderCards(model) {
     if (!cardsWrap) return;
     cardsWrap.innerHTML = "";
@@ -342,6 +342,12 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
     return { w: r.width, h: r.height };
   }
 
+  let drawRaf = 0;
+  function scheduleDraw() {
+    cancelAnimationFrame(drawRaf);
+    drawRaf = requestAnimationFrame(() => layoutAndDraw());
+  }
+
   function layoutAndDraw() {
     if (!root || !svg || !cardsWrap) return;
 
@@ -368,31 +374,37 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
     const cardH = Math.round(sz.h);
 
     const maxFit = computeAutoCols(containerW, cardW, V0.gapX, V0.padX);
-    let cols = clamp(Math.min(V0.cols, maxFit), 1, 10);
+    const cols = clamp(Math.min(V0.cols, maxFit), 1, 10);
 
-    const clearance = Math.round(clamp(cardW * 0.03, 6, 10));
-    const baseEdgeOut = Math.round(V0.elbowX) + clearance;
-    const elbowR = Math.round(clamp(cardW * 0.075, 10, 20));
-    const rightBonus = Math.round(clamp(cardW * 0.06, 10, 24));
-    // was: const dropPad = Math.round(clamp(cardH * 0.30, 16, 34));
-    const dropPad = Math.round(clamp(V0.gapY * 0.55, 10, 22));
-
-    // ✅ Safe draw bounds (accounts for bleed + stroke-ish padding)
     const padX = Math.max(Math.round(V0.padX), (CFG_S.MIN_PAD_X ?? 12));
-    const bleed = Math.max(Math.round(V0.bleed), (CFG_S.MIN_BLEED ?? 16));
-    const strokePad = (CFG_S.STROKE_PAD ?? 14);
-    // Old (too aggressive)
-    // const minX = Math.max(padX, bleed, strokePad);
-    // const maxX = Math.max(minX, containerW - minX);
-
-    // ✅ Clamp bounds stay inside the content frame (prevents edge-posts on mobile)
-    const frame = Math.max(
-      padX,                         // keep inside your content padding
-      Math.round(containerW * 0.06) // small viewport-relative safety
-    );
+    const frame = Math.max(padX, Math.round(containerW * 0.06));
 
     const minX = frame;
     const maxX = containerW - frame;
+
+    const maxEdgeOutAllowed = Math.max(
+      10,
+      Math.floor((maxX - minX - cardW) / 2) - 6
+    );
+
+    // FIX: scale elbow geometry with gap + lane space (not cardW)
+    const strokeW = Math.round(clamp(V0.strokeW || 9, 5, 12));
+    const clearance = Math.round(clamp(strokeW * 0.9, 5, 10));
+
+    const lane = (maxX - minX - cardW) / 2;
+    const edgeSpace = Math.max(18, Math.floor(lane));
+
+    const edgeOutFromGap = Math.round(clamp(V0.gapX * 0.85, 10, 48));
+    const baseEdgeOut0 = Math.round(clamp(V0.elbowX || edgeOutFromGap, 10, 48)) + clearance;
+
+    const autoR = Math.round(clamp(Math.min(V0.gapX, V0.gapY) * 0.42, 8, 18));
+    const elbowR0 = Math.round((V0.elbowR && V0.elbowR > 0) ? V0.elbowR : autoR);
+    const elbowR = Math.min(elbowR0, Math.round(clamp(edgeSpace * 0.45, 8, 18)));
+
+    const rightBonus = Math.round(clamp(V0.gapX * 0.35, 6, 18));
+    const dropPad = Math.round(clamp(V0.gapY * 0.55, 10, 22));
+
+    const baseEdgeOut = Math.min(baseEdgeOut0, maxEdgeOutAllowed);
 
     const centers = [];
     for (let i = 0; i < cards.length; i++) {
@@ -403,7 +415,6 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
 
       const contentW = cols * cardW + (cols - 1) * V0.gapX;
 
-      // ✅ Center cards, but keep within padX bounds (no drift)
       const startX0 = Math.round((containerW - contentW) / 2);
       let startX = Math.max(padX, startX0);
       if (startX + contentW > containerW - padX) {
@@ -436,7 +447,8 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
       if (a.row === b.row) {
         d += curveBetween(a.x, a.y, b.x, b.y) + " ";
       } else {
-        const edgeOutTurn = (a.dir > 0) ? (baseEdgeOut + rightBonus) : baseEdgeOut;
+        const edgeOutTurnRaw = (a.dir > 0) ? (baseEdgeOut + rightBonus) : baseEdgeOut;
+        const edgeOutTurn = Math.min(edgeOutTurnRaw, maxEdgeOutAllowed);
         d += uTurn(a.x, a.y, b.x, b.y, a.dir, cardW, edgeOutTurn, elbowR, dropPad, minX, maxX) + " ";
       }
     }
@@ -483,8 +495,6 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
 
     renderCards(filtered);
     scheduleDraw();
-
-    console.log("layoutAndDraw running", Date.now());
   }
 
   function setActiveChip(type) {
@@ -513,18 +523,7 @@ function uTurn(x1, y1, x2, y2, dir, cardW, edgeOut, r, dropPad, minX, maxX) {
     });
   }
 
-  let raf = 0;
-  window.addEventListener("resize", () => {
-    cancelAnimationFrame(raf);
-    scheduleDraw();
-  });
-
-  let drawRaf = 0;
-  function scheduleDraw() {
-    cancelAnimationFrame(drawRaf);
-    drawRaf = requestAnimationFrame(() => layoutAndDraw());
-  }
-
+  window.addEventListener("resize", () => scheduleDraw());
 
   async function load() {
     try {

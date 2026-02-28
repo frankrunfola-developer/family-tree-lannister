@@ -46,7 +46,7 @@ SECRET = os.environ.get("LINEAGEMAP_SECRET", "dev-secret-change-me")
 # Default demo dataset when not logged in (previews + fallback)
 DEFAULT_SAMPLE_ID = "stark"
 
-MAP_ENABLED = False
+MAP_ENABLED = True
 
 # Allow-list for /api/sample/<sample_id>/tree and demo pages
 ALLOWED_SAMPLES = {"kennedy", "windsor","kardashian", "jackson", "ambani", "stark", "lannister","sen", "gupta"}

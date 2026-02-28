@@ -12,6 +12,8 @@ window.TIMELINE_CFG = {
     COLS: 3,
     ELBOW_X: 10,
     BLEED: 34,
+    STROKE_W: 9,   // NEW (optional)
+    ELBOW_R: 0,    // NEW (0 = auto)
   },
   safety: {
     MIN_PAD_X: 5,

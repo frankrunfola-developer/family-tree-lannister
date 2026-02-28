@@ -23,14 +23,17 @@
 
   /* Proportional scaling (bounded) */
   --brand-rail: clamp(180px, 24vw, 320px);
-  --brand-height: clamp(78px, 9vw, 120px);
+  /* Logo can never be taller than the topbar's inner space */
+  --brand-height: clamp(52px, 6.2vw, calc(var(--topbar-h) - 12px));
 
   /* Proportional hang */
   --brand-overhang: clamp(10px, 1.6vw, 18px);
 
   /* Fine-tune position */
-  --brand-nudge-x: -45px;  /* more negative = further left */
+  --brand-nudge-x: clamp(-12px, -2.2vw, -45px);
   --brand-nudge-y: 0px;    /* negative = closer to top */
+
+  --topbar-h: clamp(64px, 8vw, 78px);
 }
 
 .topbar{
@@ -40,7 +43,7 @@
   /* add this */
   position: sticky;
 
-  height: 72px;
+  height: var(--topbar-h);
   display: flex;
   align-items: center;
 
@@ -98,14 +101,14 @@
 /* LEFT slot stays on the far-left; allow logo to sit higher */
 .topbar-left{
   display:flex;
-  align-items:flex-start;
-  align-self: start;
+  align-items:center;
+  align-self: center;
   justify-self: start;
   min-width: 0;
 }
 
 /* ------------------------------------------------------------
-   Brand: proportional scaling 
+   Brand: proportional scaling
 ------------------------------------------------------------ */
 .brandIcon{
   display:block;
@@ -241,9 +244,9 @@
   right: var(--page-pad) !important;
 
   /* compact panel */
-  width: min(260px, calc(100vw - (var(--page-pad) * 2)));
+  width: min(120px, calc(100vw - (var(--page-pad) * 2)));
   margin: 0;
-  padding: 10px;
+  padding: 5px;
 
   z-index: 1100;
 
@@ -611,13 +614,6 @@
   }
 }
 
-
-.mobileNav{
-  background: #f7f1e6 !important; /* warm parchment */
-  backdrop-filter: none !important;
-}
-
-
 /* Dropdown must win every stacking fight */
 .topbar{ z-index: 9999 !important; }
 
@@ -626,18 +622,10 @@
   position: absolute !important;
 }
 
-.mobileNav a,
-.mobileNav .demoPicker{
-  position: relative;
-  z-index: 10001 !important;
-  background: #f7f1e6 !important; /* opaque */
-}
-
-
-/* Make mobile dropdown narrower */
+/* Make mobile dropdown narrower (but readable) */
 .mobileNav{
-  width: min(150px, calc(100vw - (var(--page-pad) * 2))) !important;
-  padding: 8px !important;
+  width: min(170px, calc(100vw - (var(--page-pad) * 2))) !important;
+  padding: 5px !important;
 }
 
 /* Slightly tighter link pills */
@@ -645,12 +633,56 @@
   padding: 9px 10px !important;
 }
 
-
-/* Push the hamburger to the absolute far-right inside the right cluster */
+/* keep right cluster tight, don't stretch the grid cell */
 .topbar-right{
-  width: 100%;
+  width: auto;
+  justify-self: end;
 }
 
+/* push hamburger to the far right within the flex row */
+.topbar-right{
+  display: inline-flex;
+}
 .navToggle{
-  margin-left: auto;
+  margin-left: .4rem; /* small, consistent */
+}
+
+/* ================================
+   Mobile dropdown: visible on parchment
+=================================== */
+.mobileNav{
+  background: rgba(252, 249, 244, 0.98) !important;
+  border: 1px solid rgba(70, 50, 36, 0.28) !important;
+  box-shadow:
+    0 22px 44px rgba(20, 14, 10, 0.28),
+    0 2px 0 rgba(255,255,255,0.65) inset !important;
+
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.mobileNav a{
+  background: rgba(255, 255, 255, 0.62) !important;
+  border: 1px solid rgba(70, 50, 36, 0.18) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.75),
+    0 1px 0 rgba(30,20,10,0.06) !important;
+}
+
+@media (hover:hover){
+  .mobileNav a:hover{
+    background: rgba(214, 186, 120, 0.30) !important;
+    border-color: rgba(70, 50, 36, 0.28) !important;
+  }
+}
+
+.mobileNav a:focus-visible{
+  outline: 2px solid rgba(178, 129, 58, 0.65);
+  outline-offset: 2px;
+}
+
+.mobileNav .demoPicker{
+  background: rgba(255,255,255,0.42) !important;
+  border: 1px solid rgba(70, 50, 36, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70) !important;
 }
