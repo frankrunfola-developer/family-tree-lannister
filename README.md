@@ -215,5 +215,5 @@ lineagemap/
 ## Delete .Identiier files
 
 ```bash
-find . -type f -name '*\.Identifier'
+find . -type f -name "*.Identifier" -delete
 ```
