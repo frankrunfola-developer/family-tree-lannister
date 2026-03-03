@@ -193,22 +193,6 @@
       }
     },
     {
-      "id": "jon",
-      "name": "Jon Snow",
-      "born": "283 AC",
-      "died": "",
-      "photo": "/static/uploads/stark/jon.png",
-      "location": {
-        "city": "Liverpool",
-        "region": "England",
-        "country": "United Kingdom",
-        "xPct": 58.0,
-        "yPct": 64.0,
-        "lat": 53.4084,
-        "lng": -2.9916
-      }
-    },
-    {
       "id": "rhaegar",
       "name": "Rhaegar Targaryen",
       "born": "259 AC",
@@ -222,6 +206,22 @@
         "yPct": 78.0,
         "lat": 51.4816,
         "lng": -3.1791
+      }
+    },
+    {
+      "id": "jon",
+      "name": "Jon Snow",
+      "born": "283 AC",
+      "died": "",
+      "photo": "/static/uploads/stark/jon.png",
+      "location": {
+        "city": "Liverpool",
+        "region": "England",
+        "country": "United Kingdom",
+        "xPct": 58.0,
+        "yPct": 64.0,
+        "lat": 53.4084,
+        "lng": -2.9916
       }
     }
   ],

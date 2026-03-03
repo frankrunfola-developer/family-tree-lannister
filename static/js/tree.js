@@ -4,6 +4,35 @@
 import { renderFamilyTree, fitTreeToScreen } from "./familyTree.js";
 import { TREE_CFG } from "./treeConfig.js";
 
+
+// Runtime gap overrides (kept out of treeConfig.js on purpose)
+export function setTreeGaps({ spouseGap, siblingGap, clusterGap, generationGap } = {}) {
+  if (Number.isFinite(spouseGap)) TREE_CFG.spacing.SPOUSE_GAP = Math.max(0, spouseGap);
+  if (Number.isFinite(siblingGap)) TREE_CFG.spacing.SIBLING_GAP = Math.max(0, siblingGap);
+  if (Number.isFinite(clusterGap)) TREE_CFG.spacing.CLUSTER_GAP = Math.max(0, clusterGap);
+
+  // generationGap controls vertical spacing BETWEEN generations (gap between card edges)
+  if (Number.isFinite(generationGap)) TREE_CFG.dagre.ranksep = Math.max(0, generationGap);
+}
+
+export function applyTreeGapOverridesFromURL(search = window.location?.search ?? "") {
+  const qs = new URLSearchParams(search);
+  const spouseGap = Number(qs.get("spouseGap"));
+  const siblingGap = Number(qs.get("siblingGap"));
+  const clusterGap = Number(qs.get("clusterGap"));
+  const generationGap = Number(qs.get("generationGap"));
+
+  setTreeGaps({
+    spouseGap: Number.isFinite(spouseGap) ? spouseGap : undefined,
+    siblingGap: Number.isFinite(siblingGap) ? siblingGap : undefined,
+    clusterGap: Number.isFinite(clusterGap) ? clusterGap : undefined,
+    generationGap: Number.isFinite(generationGap) ? generationGap : undefined,
+  });
+}
+
+// Handy for quick tuning in DevTools without editing files.
+window.setTreeGaps = setTreeGaps;
+
 function getRelPair(r) {
   if (r?.type === "spouse") return null;
   const parent = r.parentId ?? r.parent ?? r.sourceId ?? r.source ?? r.from ?? r.src;
@@ -99,21 +128,21 @@ function buildGeneDAG(data) {
   const edgeSet = new Set();
   const links = [];
 
-  const addEdge = (s, t) => {
+  const addEdge = (s, t, kind) => {
     const k = `${s}->${t}`;
     if (edgeSet.has(k)) return;
     edgeSet.add(k);
-    links.push({ sourceId: s, targetId: t });
+    links.push({ sourceId: s, targetId: t, kind: kind || "" });
   };
 
   for (const [uKey, u] of unions.entries()) {
     const uId = `u:${uKey}`;
 
     // parents -> union
-    for (const pid of u.parents) addEdge(String(pid), uId);
+    for (const pid of u.parents) addEdge(String(pid), uId, "p2u");
 
     // union -> kids
-    for (const cid of u.children) addEdge(uId, String(cid));
+    for (const cid of u.children) addEdge(uId, String(cid), "u2c");
   }
 
   return { nodes, links };
@@ -140,7 +169,12 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
     g.setNode(n.id, { width: w, height: h });
   }
 
-  for (const e of graphLinks) g.setEdge(e.sourceId, e.targetId);
+  for (const e of graphLinks) {
+    const kind = e.kind || "";
+    const minlen = kind === "p2u" ? 0 : 1;
+    const weight = kind === "p2u" ? 2 : 1;
+    g.setEdge(e.sourceId, e.targetId, { minlen, weight });
+  }
 
   dagre.layout(g);
 
@@ -174,9 +208,11 @@ function dagreLayout(graphNodes, graphLinks, opts = {}) {
 
 function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
   const CARD_W = TREE_CFG.sizing.CARD_W;
-  const CARD_OUTER_W = CARD_W + 24;
-  const { SPOUSE_GAP, SIBLING_GAP, CLUSTER_GAP, ROW_EPS } = TREE_CFG.spacing;
-  const MIN_GAP = 14;
+  const { SPOUSE_GAP, SIBLING_GAP, CLUSTER_GAP } = TREE_CFG.spacing;
+  const COUPLE_KEEP_OUT_PAD = 10;
+  const ROW_EPS = 10;
+  const MIN_NODE_GAP = Math.max(4, Math.floor(SIBLING_GAP / 6));
+  const EFFECTIVE_CLUSTER_GAP = Math.max(CLUSTER_GAP, CARD_W + SIBLING_GAP + 40);
 
   const byId = new Map(laidNodes.map((n) => [String(n.id), n]));
   const isUnion = (id) => byId.get(String(id))?.kind === "union";
@@ -222,18 +258,18 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
     personId = String(personId);
     if (personWidthMemo.has(personId)) return personWidthMemo.get(personId);
 
-    if (visiting.has(personId)) return CARD_OUTER_W;
+    if (visiting.has(personId)) return CARD_W;
     visiting.add(personId);
 
     const childUnions = unionsByParent.get(personId) ?? [];
     if (!childUnions.length) {
-      personWidthMemo.set(personId, CARD_OUTER_W);
+      personWidthMemo.set(personId, CARD_W);
       visiting.delete(personId);
-      return CARD_OUTER_W;
+      return CARD_W;
     }
 
     const widths = childUnions.map((uId) => unionSubtreeWidth(uId, visiting));
-    const total = widths.reduce((a, b) => a + b, 0) + Math.max(0, widths.length - 1) * CLUSTER_GAP;
+    const total = widths.reduce((a, b) => a + b, 0) + Math.max(0, widths.length - 1) * EFFECTIVE_CLUSTER_GAP;
 
     const w = Math.max(CARD_W, total);
     personWidthMemo.set(personId, w);
@@ -247,21 +283,21 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
 
     const pc = unions.get(unionId);
     if (!pc) {
-      unionWidthMemo.set(unionId, CARD_OUTER_W);
-      return CARD_OUTER_W;
+      unionWidthMemo.set(unionId, CARD_W);
+      return CARD_W;
     }
 
     const parentIds = sortByBaseX([...pc.parents]);
     const childIds = sortByBaseX([...pc.children]);
 
     const spouseBlockW =
-      parentIds.length * CARD_OUTER_W + Math.max(0, parentIds.length - 1) * SPOUSE_GAP;
+      parentIds.length * CARD_W + Math.max(0, parentIds.length - 1) * SPOUSE_GAP;
 
     const childWidths = childIds.map((cid) => personSubtreeWidth(cid, visiting));
     const childrenBlockW =
       childWidths.reduce((a, b) => a + b, 0) + Math.max(0, childWidths.length - 1) * SIBLING_GAP;
 
-    const w = Math.max(spouseBlockW, childrenBlockW, CARD_OUTER_W);
+    const w = Math.max(spouseBlockW, childrenBlockW, CARD_W);
     unionWidthMemo.set(unionId, w);
     return w;
   }
@@ -311,7 +347,7 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
 
     // If nothing is fixed, do the normal symmetric placement
     if (!fixed.length) {
-      const step = CARD_OUTER_W + SPOUSE_GAP;
+      const step = CARD_W + SPOUSE_GAP;
       const totalW = (n - 1) * step;
       const startX = centerX - totalW / 2;
 
@@ -335,7 +371,7 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
       fixedXs.length ? (fixedXs.reduce((a, b) => a + b, 0) / fixedXs.length) : centerX;
 
     // Build target slots around anchor
-    const step = CARD_OUTER_W + SPOUSE_GAP;
+    const step = CARD_W + SPOUSE_GAP;
     const totalW = (n - 1) * step;
     const startX = anchorX - totalW / 2;
 
@@ -446,7 +482,7 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
 
   const rootWs = rootUnions.map((uId) => unionSubtreeWidth(uId));
   const rootTotalW =
-    rootWs.reduce((a, b) => a + b, 0) + Math.max(0, rootWs.length - 1) * CLUSTER_GAP;
+    rootWs.reduce((a, b) => a + b, 0) + Math.max(0, rootWs.length - 1) * EFFECTIVE_CLUSTER_GAP;
 
   let cursor = ANCHOR_X - rootTotalW / 2;
   for (let i = 0; i < rootUnions.length; i++) {
@@ -456,82 +492,7 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
 
     layoutUnion(uId, mid);
 
-    cursor += w + CLUSTER_GAP;
-
-
-  function recenterUnionsToParents() {
-    for (const [uId, pc] of unions.entries()) {
-      const u = byId.get(String(uId));
-      if (!u) continue;
-      const px = [...pc.parents]
-        .map((pid) => byId.get(String(pid))?.x)
-        .filter((x) => typeof x === "number");
-      if (!px.length) continue;
-      u.x = px.reduce((a, b) => a + b, 0) / px.length;
-    }
-  }
-
-  function enforceCoupleAdjacency() {
-    const step = CARD_OUTER_W + SPOUSE_GAP;
-    for (const [uId, pc] of unions.entries()) {
-      const parents = [...pc.parents].map(String).filter((pid) => byId.get(pid)?.kind !== "union");
-      if (parents.length !== 2) continue;
-
-      const p1 = byId.get(parents[0]);
-      const p2 = byId.get(parents[1]);
-      const u = byId.get(String(uId));
-      if (!p1 || !p2 || !u) continue;
-
-      const cx = typeof u.x === "number" ? u.x : (p1.x + p2.x) / 2;
-      const leftX = cx - step / 2;
-      const rightX = cx + step / 2;
-
-      // Keep original left/right ordering stable by baseX
-      const p1Base = (p1._baseX ?? p1.x);
-      const p2Base = (p2._baseX ?? p2.x);
-      const leftIsP1 = p1Base <= p2Base;
-
-      if (leftIsP1) {
-        p1.x = leftX;
-        p2.x = rightX;
-      } else {
-        p2.x = leftX;
-        p1.x = rightX;
-      }
-      assignedPerson.add(String(p1.id));
-      assignedPerson.add(String(p2.id));
-      u.x = (p1.x + p2.x) / 2;
-    }
-  }
-
-  function enforceNoOverlapByRow() {
-    const rowBuckets = new Map();
-    for (const n of laidNodes) {
-      if (n.kind === "union") continue;
-      const y = typeof n.y === "number" ? n.y : 0;
-      const key = Math.round(y / ROW_EPS);
-      if (!rowBuckets.has(key)) rowBuckets.set(key, []);
-      rowBuckets.get(key).push(n);
-    }
-
-    for (const nodes of rowBuckets.values()) {
-      nodes.sort((a, b) => a.x - b.x);
-      let cursor = -Infinity;
-      for (const n of nodes) {
-        const half = CARD_OUTER_W / 2;
-        const minX = cursor + half + MIN_GAP;
-        if (n.x - half < minX) n.x = minX + half;
-        cursor = n.x + half;
-      }
-    }
-  }
-
-  // Post-pass: keep couples adjacent and prevent horizontal overlaps.
-  recenterUnionsToParents();
-  enforceCoupleAdjacency();
-  enforceNoOverlapByRow();
-  recenterUnionsToParents();
-
+    cursor += w + EFFECTIVE_CLUSTER_GAP;
   }
 
   for (const n of laidNodes) {
@@ -552,6 +513,67 @@ function recursiveWidthLayout(laidNodes, laidLinks, bounds) {
   const pad = TREE_CFG.view.pad;
   const shiftX = (minX === Infinity) ? 0 : (pad - minX);
   for (const n of laidNodes) n.x += shiftX;
+
+  // 1) Keep-out: never allow other nodes to sit between spouses/partners.
+  const rowKeyOf = (y) => Math.round((y || 0) / ROW_EPS);
+  const rowOf = new Map();
+  for (const n of laidNodes) {
+    if (n.kind === "union") continue;
+    const k = rowKeyOf(n.y);
+    if (!rowOf.has(k)) rowOf.set(k, []);
+    rowOf.get(k).push(n);
+  }
+
+  const parentKeepouts = [];
+  for (const [uId, pc] of unions.entries()) {
+    const parents = [...pc.parents].map(String).map((id) => byId.get(id)).filter(Boolean).filter((n) => n.kind !== "union");
+    if (parents.length < 2) continue;
+    const yk = rowKeyOf(parents[0].y);
+    const xs = parents.map((p) => p.x).filter((x) => typeof x === "number");
+    if (!xs.length) continue;
+    const left = Math.min(...xs);
+    const right = Math.max(...xs) + CARD_W;
+    parentKeepouts.push({ rowKey: yk, parentIds: new Set(parents.map((p) => String(p.id))), left: left - COUPLE_KEEP_OUT_PAD, right: right + COUPLE_KEEP_OUT_PAD });
+  }
+
+  for (const ko of parentKeepouts) {
+    const row = rowOf.get(ko.rowKey) || [];
+    // Sort stable so pushes are deterministic
+    row.sort((a, b) => a.x - b.x);
+    for (const n of row) {
+      const id = String(n.id);
+      if (ko.parentIds.has(id)) continue;
+      const nLeft = n.x;
+      const nRight = n.x + CARD_W;
+      const overlapsKeepout = !(nRight < ko.left || nLeft > ko.right);
+      if (!overlapsKeepout) continue;
+
+      // Push to nearest side
+      const toLeft = Math.abs(nRight - ko.left) <= Math.abs(ko.right - nLeft);
+      n.x = toLeft ? (ko.left - CARD_W - MIN_NODE_GAP) : (ko.right + MIN_NODE_GAP);
+    }
+  }
+
+  // 2) Hard guarantee: resolve any remaining overlaps within each row.
+  for (const [rk, row] of rowOf.entries()) {
+    row.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < row.length; i++) {
+      const prev = row[i - 1];
+      const cur = row[i];
+      const minX = prev.x + CARD_W + MIN_NODE_GAP;
+      if (cur.x < minX) cur.x = minX;
+    }
+  }
+
+  // Recompute new width after pushes
+  let __minX2 = Infinity, __maxX2 = -Infinity;
+  for (const n of laidNodes) {
+    if (typeof n.x !== "number") continue;
+    __minX2 = Math.min(__minX2, n.x);
+    __maxX2 = Math.max(__maxX2, n.x);
+  }
+  const __shiftX2 = (__minX2 === Infinity) ? 0 : (pad - __minX2);
+  for (const n of laidNodes) n.x += __shiftX2;
 
   const newWidth = (maxX - minX) + pad * 2;
   return { nodes: laidNodes, width: newWidth };
@@ -756,8 +778,6 @@ export async function initTree(treeName = "stark") {
   let data = await loadTreeData(treeName);
 
   const fullTree = window.TREE_FULL_TREE === true;
-  const moreBtn = document.getElementById("treeMoreBtn");
-  if (moreBtn) moreBtn.textContent = fullTree ? "Show Simple Tree" : "Show Full Tree";
 
   const descendantsOnly = (window.TREE_DESCENDANTS_ONLY !== false) && !fullTree;
   if (descendantsOnly) {
@@ -787,10 +807,10 @@ export async function initTree(treeName = "stark") {
   panZoomApi.reset();
   fitTreeToScreen(svg);
 
-  const moreBtn2 = document.getElementById("treeMoreBtn");
-  if (moreBtn2 && !moreBtn2._wired) {
-    moreBtn2._wired = true;
-    moreBtn2.addEventListener("click", () => {
+  const moreBtn = document.getElementById("treeMoreBtn");
+  if (moreBtn && !moreBtn._wired) {
+    moreBtn._wired = true;
+    moreBtn.addEventListener("click", () => {
       window.TREE_FULL_TREE = !(window.TREE_FULL_TREE === true);
       initTree(String(treeName).toLowerCase()).catch((e) => console.error(e));
     });
@@ -798,6 +818,17 @@ export async function initTree(treeName = "stark") {
 }
 
 function __lmBoot() {
+  applyTreeGapOverridesFromURL();
+
+  console.info("[LineAgeMap] TREE_CFG", {
+    generationGap: TREE_CFG.dagre.ranksep,
+    nodesep: TREE_CFG.dagre.nodesep,
+    spouseGap: TREE_CFG.spacing.SPOUSE_GAP,
+    siblingGap: TREE_CFG.spacing.SIBLING_GAP,
+    clusterGap: TREE_CFG.spacing.CLUSTER_GAP,
+  });
+  window.setTreeGaps = setTreeGaps;
+  window.TREE_CFG = TREE_CFG;
   const svg = document.querySelector("#treeSvg");
   if (!svg) return;
   const fam = (window.TREE_FAMILY_ID || "stark");

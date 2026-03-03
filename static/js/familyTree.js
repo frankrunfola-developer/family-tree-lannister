@@ -3,7 +3,7 @@
 // IMPORTANT: node.x/node.y are CENTER coordinates everywhere (Option A).
 // NOTE: We only "frame" the tree by computing a tight viewBox. We do NOT change layout math.
 
-import { TREE_CFG } from "./treeConfig.js";
+import { TREE_CFG, computeStemLenPx } from "./treeConfig.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -41,8 +41,7 @@ function anchor(n, where) {
 }
 
 function computeStemLen() {
-  const stem = TREE_CFG.links.STEM;
-  return (typeof stem === "number" && isFinite(stem) && stem > 0) ? stem : 14;
+  return computeStemLenPx();
 }
 
 function drawMarriageIcon(linksG, x, y) {

@@ -7,45 +7,46 @@
    - People data: window.MAP_API_URL must return { people:[...] } (tree endpoints)
 ---------------------------------------------------------------------------------- */
 
-const MapLib = (() => {
-  const token = (window.MAPBOX_TOKEN || "").trim();
-  if (token && window.mapboxgl) return { engine: "mapbox", gl: window.mapboxgl, token };
-  if (window.maplibregl) return { engine: "maplibre", gl: window.maplibregl, token: "" };
-  return null;
-})();
-
-const elMap = document.getElementById("lmMap");
-const elStage = elMap?.closest(".mapStage");
-
-if (elStage && window.ResizeObserver) {
-  const ro = new ResizeObserver(() => {
-    try { window.__lmMapInstance?.resize?.(); } catch {}
-  });
-  ro.observe(elStage);
-}
-
-
-if (!MapLib || !elMap) {
-  console.warn("Map engine not available.");
-} else {
+document.addEventListener("DOMContentLoaded", () => {
   boot().catch(err => console.error(err));
-}
+});
+
 
 async function boot() {
+  const MapLib = (() => {
+    const token = (window.MAPBOX_TOKEN || "").trim();
+    if (token && window.mapboxgl) return { engine: "mapbox", gl: window.mapboxgl, token };
+    if (window.maplibregl) return { engine: "maplibre", gl: window.maplibregl, token: "" };
+    return null;
+  })();
+
+  const elMap = document.getElementById("lmMap");
+  if (!MapLib || !elMap) {
+    console.warn("Map engine not available (mapboxgl/maplibregl missing) or #lmMap not found.");
+    return;
+  }
   const data = await fetchPeople();
   const features = toFeatures(data.people || []);
   const gl = MapLib.gl;
 
   if (MapLib.engine === "mapbox") gl.accessToken = MapLib.token;
 
-  const map = new gl.Map({
+  let map;
+  try {
+    map = new gl.Map({
     container: elMap,
     style: getStyle(MapLib),
     center: [-25, 25],
     zoom: 1.6,
     pitch: 0,
     attributionControl: false
-  });
+    });
+  } catch (e) {
+    console.warn("Map init failed, using static fallback", e);
+    const people = await fetchPeople();
+    renderStaticMap(elMap, people);
+    return;
+  }
 
   if (map.addControl) {
     map.addControl(new gl.NavigationControl({ visualizePitch: true }), "top-right");
@@ -87,7 +88,7 @@ async function boot() {
     });
 
     if (features.length) {
-      fitToPeople(map, features);
+      fitToPeople(gl, map, features);
     }
 
     const markers = new Map(); // key -> gl.Marker
@@ -263,6 +264,70 @@ async function fetchPeople() {
   return await res.json();
 }
 
+function renderStaticMap(elMap, people) {
+  // Guaranteed fallback: static image + percentage pins.
+  elMap.innerHTML = "";
+  elMap.style.position = "relative";
+  elMap.style.overflow = "hidden";
+  elMap.style.minHeight = elMap.style.minHeight || "420px";
+
+  const imgUrl = window.MAP_IMG || "";
+  const img = document.createElement("img");
+  img.alt = "Map";
+  img.src = imgUrl;
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.objectFit = "cover";
+  img.style.display = "block";
+  elMap.appendChild(img);
+
+  const layer = document.createElement("div");
+  layer.style.position = "absolute";
+  layer.style.inset = "0";
+  elMap.appendChild(layer);
+
+  for (const p of people || []) {
+    const loc = p.location || {};
+    const x = Number(loc.xPct);
+    const y = Number(loc.yPct);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+    const pin = document.createElement("button");
+    pin.type = "button";
+    pin.className = "lmPin";
+    pin.title = p.name || "";
+    pin.style.position = "absolute";
+    pin.style.left = x + "%";
+    pin.style.top = y + "%";
+    pin.style.transform = "translate(-50%, -50%)";
+    pin.style.width = "34px";
+    pin.style.height = "34px";
+    pin.style.borderRadius = "999px";
+    pin.style.border = "2px solid rgba(0,0,0,0.25)";
+    pin.style.background = "rgba(255,255,255,0.92)";
+    pin.style.boxShadow = "0 6px 14px rgba(0,0,0,0.18)";
+    pin.style.padding = "0";
+    pin.style.overflow = "hidden";
+    pin.style.cursor = "pointer";
+
+    const a = document.createElement("img");
+    a.alt = p.name || "";
+    a.src = p.photo || "";
+    a.style.width = "100%";
+    a.style.height = "100%";
+    a.style.objectFit = "cover";
+    pin.appendChild(a);
+
+    pin.addEventListener("click", () => {
+      alert(p.name || "Person");
+    });
+
+    layer.appendChild(pin);
+  }
+}
+
+
+
 function toFeatures(people) {
   const out = [];
   for (const p of people) {
@@ -315,8 +380,9 @@ function getStyle(lib) {
   };
 }
 
-function fitToPeople(map, features) {
-  const b = new (MapLib.gl.LngLatBounds)(features[0].geometry.coordinates, features[0].geometry.coordinates);
+function fitToPeople(gl, map, features) {
+  // Use the active engine's LngLatBounds (Mapbox GL or MapLibre)
+  const b = new gl.LngLatBounds(features[0].geometry.coordinates, features[0].geometry.coordinates);
   for (const f of features) b.extend(f.geometry.coordinates);
   map.fitBounds(b, { padding: 60, duration: 600, maxZoom: 6.8 });
 }
@@ -449,12 +515,3 @@ function makeSpiderfy(map) {
 
   return { clear, show };
 }
-
-// Auto-boot when map page loads
-window.addEventListener("DOMContentLoaded", () => {
-  try {
-    const isMapPage = document.getElementById("lmMap");
-    if (!isMapPage) return;
-    boot().catch((e) => console.error(e));
-  } catch (e) { console.error(e); }
-});
