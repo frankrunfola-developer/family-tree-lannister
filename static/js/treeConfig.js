@@ -2,9 +2,9 @@ export const TREE_CFG = {
   dagre: {
     rankdir: "TB",
     nodesep: 20,
-    ranksep: 40,
-    marginx: 20,
-    marginy: 20,
+    ranksep: 36,
+    marginx: 6,
+    marginy: 6,
   },
 
   layout: {
@@ -24,17 +24,17 @@ export const TREE_CFG = {
     stemMax: 60,
   },
 
-  sizing: {
-    CARD_W: 96,
-    CARD_H: 118,
-    CARD_R: 10,
-    PHOTO_W: 96,
-    PHOTO_H: 76,
-    BOTTOM_PANEL_H: 42,
-  },
-
-
+sizing: {
+  CARD_W: 168,
+  CARD_H: 204,
+  CARD_R: 11,
+  PHOTO_W: 168,
+  PHOTO_H: 152,
+  BOTTOM_PANEL_H: 52,
+},
   view: {
     stackLastGeneration: true,
+    partialChildrenVisible: 2,
+    defaultPartial: true,
   },
 };

@@ -77,18 +77,19 @@ function drawPersonCard(parent, person, x, y, metrics) {
   const textCenterX = x + (width / 2);
   const nameLines = wrapName(person.name, width);
 
-  const metaFont = clamp(Math.round(width * 0.054), 8, 10);
+
+  const metaFont = clamp(Math.round(width * 0.066), 9, 12);
 
   function fitNameToSingleLine(name, cardWidth) {
     const rawName = String(name || "").trim();
 
-    let fontSize = clamp(Math.round(cardWidth * 0.082), 8, 13);
+    let fontSize = clamp(Math.round(cardWidth * 0.096), 10, 16);
 
-    const maxTextWidth = cardWidth - 18;
+    const maxTextWidth = cardWidth - 16;
 
-    const estWidth = (text, size) => text.length * size * 0.56;
+    const estWidth = (text, size) => text.length * size * 0.54;
 
-    while (fontSize > 8 && estWidth(rawName, fontSize) > maxTextWidth) {
+    while (fontSize > 10 && estWidth(rawName, fontSize) > maxTextWidth) {
       fontSize -= 1;
     }
 
@@ -116,10 +117,11 @@ function drawPersonCard(parent, person, x, y, metrics) {
   const yearsText = person.yearsText || "";
   const hasYears = Boolean(yearsText);
 
-  const bottomPadding = Math.max(8, Math.round(textH * 0.12));
+  const bottomPadding = Math.max(10, Math.round(textH * 0.16));
   const reservedBottomH = hasYears ? (metaGap + bottomPadding) : bottomPadding;
 
-  const nameStartY = textTop + Math.max(12, Math.round(textH * 0.24));
+  const nameStartY = textTop + Math.max(16, Math.round(textH * 0.34));
+
   const g = group(parent, "tree-card-shadow");
 
   const rect = svgEl("rect");

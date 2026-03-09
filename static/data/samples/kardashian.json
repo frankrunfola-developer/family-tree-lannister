@@ -8,7 +8,7 @@
     {
       "id": "kris",
       "name": "Kris Jenner",
-      "born": "1955-11-05",
+      "born": "1955",
       "died": "",
       "photo": "/static/uploads/kardashian/kris.png",
       "location": { "city": "Calabasas", "region": "CA", "country": "USA", "lat": 34.1367, "lng": -118.6615 }
@@ -16,15 +16,15 @@
     {
       "id": "robert_sr",
       "name": "Robert Kardashian Sr.",
-      "born": "1944-02-22",
-      "died": "2003-09-30",
+      "born": "1944",
+      "died": "2003",
       "photo": "/static/uploads/kardashian/robert_sr.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
     },
     {
       "id": "caitlyn",
       "name": "Caitlyn Jenner",
-      "born": "1949-10-28",
+      "born": "1949",
       "died": "",
       "photo": "/static/uploads/kardashian/caitlyn.png",
       "location": { "city": "Malibu", "region": "CA", "country": "USA", "lat": 34.0259, "lng": -118.7798 }
@@ -33,7 +33,7 @@
     {
       "id": "kourtney",
       "name": "Kourtney Kardashian",
-      "born": "1979-04-18",
+      "born": "1979",
       "died": "",
       "photo": "/static/uploads/kardashian/kourtney.png",
       "location": { "city": "Calabasas", "region": "CA", "country": "USA", "lat": 34.1367, "lng": -118.6615 }
@@ -41,7 +41,7 @@
     {
       "id": "kim",
       "name": "Kim Kardashian",
-      "born": "1980-10-21",
+      "born": "1980",
       "died": "",
       "photo": "/static/uploads/kardashian/kim.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
@@ -49,7 +49,7 @@
     {
       "id": "khloe",
       "name": "Khloé Kardashian",
-      "born": "1984-06-27",
+      "born": "1984",
       "died": "",
       "photo": "/static/uploads/kardashian/khloe.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
@@ -57,7 +57,7 @@
     {
       "id": "rob",
       "name": "Rob Kardashian",
-      "born": "1987-03-17",
+      "born": "1987",
       "died": "",
       "photo": "/static/uploads/kardashian/rob.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
@@ -66,7 +66,7 @@
     {
       "id": "kendall",
       "name": "Kendall Jenner",
-      "born": "1995-11-03",
+      "born": "1995",
       "died": "",
       "photo": "/static/uploads/kardashian/kendall.png",
       "location": { "city": "Los Angeles", "region": "CA", "country": "USA", "lat": 34.0522, "lng": -118.2437 }
@@ -74,7 +74,7 @@
     {
       "id": "kylie",
       "name": "Kylie Jenner",
-      "born": "1997-08-10",
+      "born": "1997",
       "died": "",
       "photo": "/static/uploads/kardashian/kylie.png",
       "location": { "city": "Hidden Hills", "region": "CA", "country": "USA", "lat": 34.1683, "lng": -118.6576 }

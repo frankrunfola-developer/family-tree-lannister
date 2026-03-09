@@ -6,6 +6,10 @@ function cfgNum(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
 function $(sel) {
   return document.querySelector(sel);
 }
@@ -397,14 +401,26 @@ function makeLayoutMetrics() {
   const layoutCfg = TREE_CFG?.layout || {};
   const viewCfg = TREE_CFG?.view || {};
 
-  const vw = Math.max(320, window.innerWidth || 1280);
-  const fallbackCardW = vw < 420 ? 78 : vw < 768 ? 88 : vw < 1200 ? 96 : 104;
-  const cardWidth = cfgNum(sizingCfg.CARD_W, fallbackCardW);
-  const cardHeight = cfgNum(sizingCfg.CARD_H, Math.round(cardWidth * 1.23));
-  const radius = cfgNum(sizingCfg.CARD_R, Math.max(8, Math.round(cardWidth * 0.10)));
-  const bottomPanelH = cfgNum(sizingCfg.BOTTOM_PANEL_H, Math.max(34, Math.round(cardHeight * 0.34)));
-  const photoW = cfgNum(sizingCfg.PHOTO_W, cardWidth);
-  const photoH = cfgNum(sizingCfg.PHOTO_H, Math.max(1, cardHeight - bottomPanelH));
+const vw = Math.max(320, window.innerWidth || 1280);
+const rawScale = vw / 1280;
+const scale = clamp(rawScale, 0.88, 1);
+
+const scaleNum = (value, fallback, min = 1) =>
+  Math.max(min, Math.round(cfgNum(value, fallback) * scale));
+
+  const baseCardW = cfgNum(sizingCfg.CARD_W, 104);
+  const baseCardH = cfgNum(sizingCfg.CARD_H, Math.round(baseCardW * 1.23));
+  const baseRadius = cfgNum(sizingCfg.CARD_R, Math.max(8, Math.round(baseCardW * 0.10)));
+  const baseBottomPanelH = cfgNum(sizingCfg.BOTTOM_PANEL_H, Math.max(34, Math.round(baseCardH * 0.34)));
+  const basePhotoW = cfgNum(sizingCfg.PHOTO_W, baseCardW);
+  const basePhotoH = cfgNum(sizingCfg.PHOTO_H, Math.max(1, baseCardH - baseBottomPanelH));
+
+  const cardWidth = scaleNum(baseCardW, baseCardW, 78);
+  const cardHeight = scaleNum(baseCardH, baseCardH, 96);
+  const radius = scaleNum(baseRadius, baseRadius, 8);
+  const bottomPanelH = scaleNum(baseBottomPanelH, baseBottomPanelH, 34);
+  const photoW = Math.min(cardWidth, scaleNum(basePhotoW, basePhotoW, 56));
+  const photoH = Math.min(cardHeight, scaleNum(basePhotoH, basePhotoH, 48));
   const imageRatio = Math.max(0.40, Math.min(0.82, photoH / cardHeight));
 
   return {
@@ -413,27 +429,27 @@ function makeLayoutMetrics() {
       height: cardHeight,
       radius,
       padding: 0,
-      photoWidth: Math.max(1, Math.min(cardWidth, photoW)),
-      photoHeight: Math.max(1, Math.min(cardHeight, photoH)),
+      photoWidth: Math.max(1, photoW),
+      photoHeight: Math.max(1, photoH),
       bottomPanelHeight: Math.max(1, Math.min(cardHeight - 16, bottomPanelH)),
       imageRatio,
     },
     spacing: {
-      coupleGap: cfgNum(layoutCfg.spouseGap, 26),
-      siblingGap: cfgNum(layoutCfg.siblingGap, 22),
-      clusterGap: cfgNum(layoutCfg.clusterGap, 28),
-      generationGap: Math.max(28, cfgNum(TREE_CFG?.dagre?.ranksep, 40) + 6),
-      stackGap: Math.max(8, cfgNum(layoutCfg.minNodeGap, 18)),
-      sidePad: cfgNum(TREE_CFG?.dagre?.marginx, 20),
-      topPad: cfgNum(TREE_CFG?.dagre?.marginy, 20),
-      bottomPad: cfgNum(TREE_CFG?.dagre?.marginy, 20),
-      trunkDrop: Math.max(16, cfgNum(layoutCfg.trunkDropMin, 24)),
-      childStem: Math.max(10, cfgNum(layoutCfg.stemLen, 20)),
-      unionGroupGap: Math.max(16, cfgNum(layoutCfg.clusterGap, 28)),
-      partnerBranchGap: Math.max(cardWidth + 12, cardWidth + cfgNum(layoutCfg.minPartnerGap, 24)),
+      coupleGap: scaleNum(layoutCfg.spouseGap, 26, 14),
+      siblingGap: scaleNum(layoutCfg.siblingGap, 22, 12),
+      clusterGap: scaleNum(layoutCfg.clusterGap, 28, 16),
+      generationGap: Math.max(26, scaleNum(TREE_CFG?.dagre?.ranksep, 40, 20) + 6),
+      stackGap: Math.max(8, scaleNum(layoutCfg.minNodeGap, 18, 8)),
+      sidePad: scaleNum(TREE_CFG?.dagre?.marginx, 20, 0),
+      topPad: scaleNum(TREE_CFG?.dagre?.marginy, 20, 0),
+      bottomPad: scaleNum(TREE_CFG?.dagre?.marginy, 20, 0),
+      trunkDrop: Math.max(16, scaleNum(layoutCfg.trunkDropMin, 24, 16)),
+      childStem: Math.max(10, scaleNum(layoutCfg.stemLen, 20, 10)),
+      unionGroupGap: Math.max(16, scaleNum(layoutCfg.clusterGap, 28, 16)),
+      partnerBranchGap: Math.max(cardWidth + 12, cardWidth + scaleNum(layoutCfg.minPartnerGap, 24, 14)),
     },
     view: {
-      partialDepth: cfgNum(viewCfg.partialDepth, 2),
+      partialChildrenVisible: Math.max(1, cfgNum(viewCfg.partialChildrenVisible, 3)),
       defaultPartial: viewCfg.defaultPartial !== false,
       stackLastGeneration: viewCfg.stackLastGeneration !== false,
     },
@@ -698,16 +714,21 @@ function buildScene(treeJson, previewMode) {
   const model = normalizeTree(treeJson);
   let roots = buildRenderForest(model);
 
-  const partialDepth = metrics.view.partialDepth ?? 2;
+  const partialChildrenVisible = Math.max(1, metrics.view.partialChildrenVisible ?? 3);
   if (previewMode) {
-    const trim = (node, depth) => {
-      if (depth >= partialDepth) {
-        node.children = [];
-        return;
-      }
-      node.children.forEach((child) => trim(child, depth + 1));
+    const trim = (node) => {
+      if (node.type !== "family") return;
+      node.unions = (node.unions || []).map((union) => {
+        const limitedChildren = (union.childNodes || []).slice(0, partialChildrenVisible);
+        limitedChildren.forEach((child) => trim(child));
+        return {
+          ...union,
+          childNodes: limitedChildren,
+        };
+      });
+      node.children = node.unions.flatMap((union) => union.childNodes || []);
     };
-    roots.forEach((root) => trim(root, 0));
+    roots.forEach((root) => trim(root));
   }
 
   roots = roots.map((root) => measureNode(root, metrics));
